@@ -1,0 +1,141 @@
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.component-palette {
+  width: 200px;
+  background-color: #f5f5f5;
+  padding: 20px;
+  border-right: 1px solid #ddd;
+}
+
+.component-palette h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.palette-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  cursor: grab;
+  transition: box-shadow 0.2s;
+}
+
+.palette-item:hover {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.palette-item:active {
+  cursor: grabbing;
+}
+
+.palette-icon {
+  font-size: 20px;
+}
+
+.palette-label {
+  font-size: 14px;
+  color: #555;
+}
+
+.canvas {
+  flex: 1;
+  height: 100%;
+}
+
+.analysis-panel {
+  width: 300px;
+  background-color: #f5f5f5;
+  padding: 20px;
+  border-left: 1px solid #ddd;
+  overflow-y: auto;
+}
+
+.analysis-panel h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.analyze-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+  margin-bottom: 10px;
+}
+
+.analyze-btn:hover {
+  background-color: #0056b3;
+}
+
+.reference-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.reference-btn:hover {
+  background-color: #545b62;
+}
+
+.analysis-results {
+  margin-top: 20px;
+}
+
+.issues-section,
+.suggestions-section {
+  margin-bottom: 20px;
+}
+
+.issues-section h4 {
+  color: #dc3545;
+  margin-bottom: 10px;
+}
+
+.suggestions-section h4 {
+  color: #28a745;
+  margin-bottom: 10px;
+}
+
+.issue-item {
+  color: #dc3545;
+  padding: 5px 0;
+  border-bottom: 1px solid #ffebee;
+}
+
+.suggestion-item {
+  color: #28a745;
+  padding: 5px 0;
+  border-bottom: 1px solid #e8f5e9;
+}
+
+.no-issues {
+  color: #666;
+  font-style: italic;
+}

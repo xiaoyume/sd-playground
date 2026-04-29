@@ -2,7 +2,7 @@ import type { Node, Edge } from 'reactflow';
 import { getNodeCapacity, getLoadPercentage, getLoadStatus } from './capacity';
 import { calculateNodeLoad, calculateEffectiveDBLoad } from './traffic';
 import { runRules } from '../engine/ruleEngine';
-import type { RuleResult } from '../engine/types';
+import type { RuleResult, Rule } from '../engine/types';
 
 export interface NodeLoadInfo {
   nodeId: string;
@@ -52,9 +52,16 @@ function mapRuleResultsToAnalysis(ruleResults: RuleResult[]): {
   return { issues, suggestions, bottlenecks };
 }
 
-export function analyze(nodes: Node[], edges: Edge[], qps?: number): AnalysisResult {
-  // Run plugin-based rules
-  const ruleResults = runRules({ nodes, edges, qps });
+export function analyze(
+  nodes: Node[],
+  edges: Edge[],
+  qps?: number,
+  scenarioRules?: Rule[]
+): AnalysisResult {
+  // Run plugin-based rules (scenario-specific or global)
+  const ruleResults = scenarioRules
+    ? runScenarioRules(scenarioRules, { nodes, edges, qps })
+    : runRules({ nodes, edges, qps });
   const { issues, suggestions, bottlenecks } = mapRuleResultsToAnalysis(ruleResults);
 
   const nodeLoadInfo: NodeLoadInfo[] = [];
@@ -105,6 +112,15 @@ export function analyze(nodes: Node[], edges: Edge[], qps?: number): AnalysisRes
     },
     nodeLoadInfo,
   };
+}
+
+function runScenarioRules(rules: Rule[], ctx: { nodes: Node[]; edges: Edge[]; qps?: number }): RuleResult[] {
+  const results: RuleResult[] = [];
+  for (const rule of rules) {
+    const ruleResults = rule.run(ctx);
+    results.push(...ruleResults);
+  }
+  return results;
 }
 
 function getNodeType(label: string): string {

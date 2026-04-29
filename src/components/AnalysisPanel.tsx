@@ -5,17 +5,28 @@ import useI18n from '../i18n/useI18n';
 import type { Node, Edge } from 'reactflow';
 
 const AnalysisPanel: React.FC = () => {
-  const { nodes, edges, analysisResult, setAnalysisResult, setNodes, setEdges } = useStore();
+  const {
+    nodes,
+    edges,
+    analysisResult,
+    setAnalysisResult,
+    currentScenario,
+    setCurrentScenario,
+    setNodes,
+    setEdges,
+  } = useStore();
   const { t } = useI18n();
   const [qps, setQps] = useState<number>(1000);
 
   const handleAnalyze = () => {
-    const result = analyze(nodes, edges);
+    const scenarioRules = currentScenario?.rules;
+    const result = analyze(nodes, edges, undefined, scenarioRules);
     setAnalysisResult(result);
   };
 
   const handleSimulate = () => {
-    const result = analyze(nodes, edges, qps);
+    const scenarioRules = currentScenario?.rules;
+    const result = analyze(nodes, edges, qps, scenarioRules);
     setAnalysisResult(result);
   };
 
@@ -38,9 +49,29 @@ const AnalysisPanel: React.FC = () => {
     setAnalysisResult(null);
   };
 
+  const handleBackToScenarios = () => {
+    setCurrentScenario(null);
+    setNodes([]);
+    setEdges([]);
+    setAnalysisResult(null);
+  };
+
   return (
     <div className="analysis-panel">
-      <h3>{t.analysis.title}</h3>
+      <div className="analysis-panel-header">
+        <h3>{t.analysis.title}</h3>
+        {currentScenario && (
+          <button className="back-btn" onClick={handleBackToScenarios}>
+            ← Back
+          </button>
+        )}
+      </div>
+
+      {currentScenario && (
+        <div className="scenario-badge">
+          <span className="scenario-name">{currentScenario.name}</span>
+        </div>
+      )}
 
       <div className="qps-input">
         <label htmlFor="qps">{t.analysis.trafficLabel}</label>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Network, Box, Database, Zap } from 'lucide-react';
 import useI18n from '../i18n/useI18n';
+import useStore from '../store/useStore';
 
 interface PaletteItem {
   type: string;
@@ -9,7 +10,7 @@ interface PaletteItem {
   color: string;
 }
 
-const items: PaletteItem[] = [
+const allItems: PaletteItem[] = [
   { type: 'lb', labelKey: 'loadBalancer', icon: <Network size={20} />, color: '#3b82f6' },
   { type: 'app', labelKey: 'appServer', icon: <Box size={20} />, color: '#22c55e' },
   { type: 'db', labelKey: 'database', icon: <Database size={20} />, color: '#f97316' },
@@ -18,6 +19,11 @@ const items: PaletteItem[] = [
 
 const ComponentPalette: React.FC = () => {
   const { t } = useI18n();
+  const { currentScenario } = useStore();
+
+  const items = currentScenario
+    ? allItems.filter((item) => currentScenario.allowedComponents.includes(item.type))
+    : allItems;
 
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);

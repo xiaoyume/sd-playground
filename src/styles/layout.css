@@ -536,3 +536,87 @@
   font-size: 14px;
   font-weight: 600;
 }
+
+/* Simulation Controls */
+.simulation-controls {
+  margin-bottom: 10px;
+}
+
+.stop-btn {
+  width: 100%;
+  padding: 10px;
+  color: white;
+  background-color: #dc3545;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+  margin-bottom: 10px;
+}
+
+.stop-btn:hover {
+  background-color: #c82333;
+}
+
+/* Simulation Status */
+.simulation-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #166534;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: pulse-status 1.5s infinite;
+}
+
+@keyframes pulse-status {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Animated Edge */
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.animated-edge-path {
+  animation: dash-flow linear infinite;
+}
+
+/* Active node during simulation */
+.custom-node.node-active {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+  animation: node-glow 2s ease-in-out infinite;
+}
+
+@keyframes node-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 8px 2px rgba(59, 130, 246, 0.4);
+  }
+}
+
+/* Inactive node when simulating (dim effect) */
+.custom-node.node-inactive {
+  opacity: 0.6;
+}

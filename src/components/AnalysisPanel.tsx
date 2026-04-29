@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import useStore from '../store/useStore';
 import { analyze } from '../logic/rules';
 import useI18n from '../i18n/useI18n';
@@ -14,9 +14,19 @@ const AnalysisPanel: React.FC = () => {
     setCurrentScenario,
     setNodes,
     setEdges,
+    isSimulating,
+    setIsSimulating,
+    setAnimationSpeed,
   } = useStore();
   const { t } = useI18n();
   const [qps, setQps] = useState<number>(1000);
+
+  const getAnimationSpeed = useCallback((qps: number): number => {
+    if (qps <= 100) return 0.5;
+    if (qps <= 1000) return 1;
+    if (qps <= 5000) return 2;
+    return 3;
+  }, []);
 
   const handleAnalyze = () => {
     const scenarioRules = currentScenario?.rules;
@@ -28,6 +38,12 @@ const AnalysisPanel: React.FC = () => {
     const scenarioRules = currentScenario?.rules;
     const result = analyze(nodes, edges, qps, scenarioRules);
     setAnalysisResult(result);
+    setAnimationSpeed(getAnimationSpeed(qps));
+    setIsSimulating(true);
+  };
+
+  const handleStop = () => {
+    setIsSimulating(false);
   };
 
   const handleLoadReference = () => {
@@ -47,6 +63,7 @@ const AnalysisPanel: React.FC = () => {
     setNodes(referenceNodes);
     setEdges(referenceEdges);
     setAnalysisResult(null);
+    setIsSimulating(false);
   };
 
   const handleBackToScenarios = () => {
@@ -54,6 +71,7 @@ const AnalysisPanel: React.FC = () => {
     setNodes([]);
     setEdges([]);
     setAnalysisResult(null);
+    setIsSimulating(false);
   };
 
   return (
@@ -88,12 +106,28 @@ const AnalysisPanel: React.FC = () => {
       <button className="analyze-btn" onClick={handleAnalyze}>
         {t.analysis.analyze}
       </button>
-      <button className="simulate-btn" onClick={handleSimulate}>
-        {t.analysis.simulate}
-      </button>
       <button className="reference-btn" onClick={handleLoadReference}>
         {t.analysis.loadReference}
       </button>
+
+      <div className="simulation-controls">
+        {!isSimulating ? (
+          <button className="simulate-btn" onClick={handleSimulate}>
+            ▶ Simulate Traffic
+          </button>
+        ) : (
+          <button className="stop-btn" onClick={handleStop}>
+            ⏹ Stop
+          </button>
+        )}
+      </div>
+
+      {isSimulating && (
+        <div className="simulation-status">
+          <div className="status-indicator"></div>
+          <span>Simulating {qps} QPS</span>
+        </div>
+      )}
 
       {analysisResult && (
         <div className="analysis-results">

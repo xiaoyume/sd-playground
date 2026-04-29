@@ -18,6 +18,7 @@ export interface AnalysisResult {
   issues: string[];
   suggestions: string[];
   bottlenecks: string[];
+  bottleneckNodeIds: string[];
   loadBreakdown: {
     appLoad: number;
     dbLoad: number;
@@ -30,15 +31,20 @@ function mapRuleResultsToAnalysis(ruleResults: RuleResult[]): {
   issues: string[];
   suggestions: string[];
   bottlenecks: string[];
+  bottleneckNodeIds: string[];
 } {
   const issues: string[] = [];
   const suggestions: string[] = [];
   const bottlenecks: string[] = [];
+  const bottleneckNodeIds: string[] = [];
 
   for (const result of ruleResults) {
     switch (result.type) {
       case 'issue':
         bottlenecks.push(result.message);
+        if (result.nodeId) {
+          bottleneckNodeIds.push(result.nodeId);
+        }
         break;
       case 'warning':
         suggestions.push(result.message);
@@ -49,7 +55,7 @@ function mapRuleResultsToAnalysis(ruleResults: RuleResult[]): {
     }
   }
 
-  return { issues, suggestions, bottlenecks };
+  return { issues, suggestions, bottlenecks, bottleneckNodeIds };
 }
 
 export function analyze(
@@ -62,7 +68,7 @@ export function analyze(
   const ruleResults = scenarioRules
     ? runScenarioRules(scenarioRules, { nodes, edges, qps })
     : runRules({ nodes, edges, qps });
-  const { issues, suggestions, bottlenecks } = mapRuleResultsToAnalysis(ruleResults);
+  const { issues, suggestions, bottlenecks, bottleneckNodeIds } = mapRuleResultsToAnalysis(ruleResults);
 
   const nodeLoadInfo: NodeLoadInfo[] = [];
   let appLoad = 0;
@@ -105,6 +111,7 @@ export function analyze(
     issues,
     suggestions,
     bottlenecks,
+    bottleneckNodeIds,
     loadBreakdown: {
       appLoad,
       dbLoad,

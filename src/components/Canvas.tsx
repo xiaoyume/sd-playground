@@ -11,9 +11,14 @@ import type { Connection, Node, ReactFlowInstance } from 'reactflow';
 import 'reactflow/dist/style.css';
 import useStore from '../store/useStore';
 import CustomNode from './CustomNode';
+import AnimatedEdge from './edges/AnimatedEdge';
 
 const nodeTypes = {
   custom: CustomNode,
+};
+
+const edgeTypes = {
+  animated: AnimatedEdge,
 };
 
 const Canvas: React.FC = () => {
@@ -28,10 +33,12 @@ const Canvas: React.FC = () => {
     setNodes: setStoreNodes,
     setEdges: setStoreEdges,
     analysisResult,
+    isSimulating,
+    animationSpeed,
   } = useStore();
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection) => setEdges((eds) => addEdge({ ...params, type: 'animated' }, eds)),
     [setEdges]
   );
 
@@ -125,24 +132,41 @@ const Canvas: React.FC = () => {
     setStoreEdges(edges);
   }, [edges, setStoreEdges]);
 
+  // Get connected node IDs from edges
+  const connectedNodeIds = useMemo(() => {
+    const ids = new Set<string>();
+    edges.forEach((edge) => {
+      ids.add(edge.source);
+      ids.add(edge.target);
+    });
+    return ids;
+  }, [edges]);
+
   // Apply node styles based on analysis result
   const styledNodes = useMemo(() => {
     if (!analysisResult || !analysisResult.nodeLoadInfo || analysisResult.nodeLoadInfo.length === 0) {
-      return nodes;
+      return nodes.map((node) => {
+        let className = '';
+        if (isSimulating) {
+          className = connectedNodeIds.has(node.id) ? 'node-active' : 'node-inactive';
+        }
+        return { ...node, className };
+      });
     }
 
     return nodes.map((node) => {
       const loadInfo = analysisResult.nodeLoadInfo.find((info) => info.nodeId === node.id);
 
-      if (!loadInfo) {
-        return node;
-      }
-
       let className = '';
-      if (loadInfo.status === 'warning') {
-        className = 'node-warning';
-      } else if (loadInfo.status === 'overloaded') {
-        className = 'node-overloaded';
+      if (isSimulating) {
+        className = connectedNodeIds.has(node.id) ? 'node-active' : 'node-inactive';
+      }
+      if (loadInfo) {
+        if (loadInfo.status === 'warning') {
+          className = 'node-warning';
+        } else if (loadInfo.status === 'overloaded') {
+          className = 'node-overloaded';
+        }
       }
 
       return {
@@ -150,13 +174,30 @@ const Canvas: React.FC = () => {
         className,
       };
     });
-  }, [nodes, analysisResult]);
+  }, [nodes, analysisResult, isSimulating, connectedNodeIds]);
+
+  // Apply edge animation props
+  const animatedEdges = useMemo(() => {
+    return edges.map((edge) => {
+      const isBottleneck = analysisResult?.bottleneckNodeIds?.includes(edge.target) || false;
+
+      return {
+        ...edge,
+        type: 'animated',
+        data: {
+          isSimulating,
+          animationSpeed,
+          isBottleneck,
+        },
+      };
+    });
+  }, [edges, isSimulating, animationSpeed, analysisResult]);
 
   return (
     <div className="canvas" ref={reactFlowWrapper}>
       <ReactFlow
         nodes={styledNodes}
-        edges={edges}
+        edges={animatedEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -164,6 +205,7 @@ const Canvas: React.FC = () => {
         onDrop={onDrop}
         onDragOver={onDragOver}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
       >
         <Controls />

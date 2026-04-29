@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useRef, useState, useMemo, useEffect } from 'react';
 import ReactFlow, {
   addEdge,
   useNodesState,
@@ -22,7 +22,13 @@ const Canvas: React.FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
-  const { setNodes: setStoreNodes, setEdges: setStoreEdges, analysisResult } = useStore();
+  const {
+    nodes: storeNodes,
+    edges: storeEdges,
+    setNodes: setStoreNodes,
+    setEdges: setStoreEdges,
+    analysisResult,
+  } = useStore();
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -73,12 +79,49 @@ const Canvas: React.FC = () => {
     setReactFlowInstance(instance);
   }, []);
 
-  // Update store when nodes or edges change
-  React.useEffect(() => {
+  const isSyncingFromStore = useRef(false);
+  const prevStoreNodesRef = useRef<string>('');
+  const prevStoreEdgesRef = useRef<string>('');
+
+  // Sync store → local when store changes (e.g., "Load Reference" click)
+  useEffect(() => {
+    const storeNodesStr = JSON.stringify(storeNodes);
+    if (storeNodesStr !== prevStoreNodesRef.current) {
+      prevStoreNodesRef.current = storeNodesStr;
+      const localNodesStr = JSON.stringify(nodes);
+      if (storeNodesStr !== localNodesStr) {
+        isSyncingFromStore.current = true;
+        setNodes(storeNodes);
+      }
+    }
+  }, [storeNodes]);
+
+  useEffect(() => {
+    const storeEdgesStr = JSON.stringify(storeEdges);
+    if (storeEdgesStr !== prevStoreEdgesRef.current) {
+      prevStoreEdgesRef.current = storeEdgesStr;
+      const localEdgesStr = JSON.stringify(edges);
+      if (storeEdgesStr !== localEdgesStr) {
+        isSyncingFromStore.current = true;
+        setEdges(storeEdges);
+      }
+    }
+  }, [storeEdges]);
+
+  // Update store when local nodes/edges change
+  useEffect(() => {
+    if (isSyncingFromStore.current) {
+      isSyncingFromStore.current = false;
+      return;
+    }
     setStoreNodes(nodes);
   }, [nodes, setStoreNodes]);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (isSyncingFromStore.current) {
+      isSyncingFromStore.current = false;
+      return;
+    }
     setStoreEdges(edges);
   }, [edges, setStoreEdges]);
 

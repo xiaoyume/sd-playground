@@ -1,18 +1,19 @@
 import React from 'react';
-import { LoadBalancerIcon, AppServerIcon, DatabaseIcon, CacheIcon } from './icons';
+import { Network, Box, Database, Zap } from 'lucide-react';
 import useI18n from '../i18n/useI18n';
 
 interface PaletteItem {
   type: string;
   labelKey: 'loadBalancer' | 'appServer' | 'database' | 'cache';
   icon: React.ReactNode;
+  color: string;
 }
 
 const items: PaletteItem[] = [
-  { type: 'lb', labelKey: 'loadBalancer', icon: <LoadBalancerIcon /> },
-  { type: 'app', labelKey: 'appServer', icon: <AppServerIcon /> },
-  { type: 'db', labelKey: 'database', icon: <DatabaseIcon /> },
-  { type: 'cache', labelKey: 'cache', icon: <CacheIcon /> },
+  { type: 'lb', labelKey: 'loadBalancer', icon: <Network size={20} />, color: '#3b82f6' },
+  { type: 'app', labelKey: 'appServer', icon: <Box size={20} />, color: '#22c55e' },
+  { type: 'db', labelKey: 'database', icon: <Database size={20} />, color: '#f97316' },
+  { type: 'cache', labelKey: 'cache', icon: <Zap size={20} />, color: '#a855f7' },
 ];
 
 const ComponentPalette: React.FC = () => {
@@ -33,6 +34,7 @@ const ComponentPalette: React.FC = () => {
             className="palette-item"
             draggable
             onDragStart={(event) => onDragStart(event, item.type)}
+            style={{ '--item-color': item.color } as React.CSSProperties}
           >
             <span className="palette-icon">{item.icon}</span>
             <span className="palette-label">{t.components[item.labelKey]}</span>

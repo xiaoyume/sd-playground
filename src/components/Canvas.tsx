@@ -138,26 +138,16 @@ const Canvas: React.FC = () => {
         return node;
       }
 
-      let backgroundColor = '#e8f5e9'; // green - normal
-      let borderColor = '#4caf50';
-
+      let className = '';
       if (loadInfo.status === 'warning') {
-        backgroundColor = '#fff3e0'; // yellow
-        borderColor = '#ff9800';
+        className = 'node-warning';
       } else if (loadInfo.status === 'overloaded') {
-        backgroundColor = '#ffebee'; // red
-        borderColor = '#f44336';
+        className = 'node-overloaded';
       }
 
       return {
         ...node,
-        style: {
-          backgroundColor,
-          borderColor,
-          borderWidth: 2,
-          borderRadius: 8,
-          padding: '10px',
-        },
+        className,
       };
     });
   }, [nodes, analysisResult]);

@@ -21,10 +21,10 @@ const AnalysisPanel: React.FC = () => {
 
   const handleLoadReference = () => {
     const referenceNodes: Node[] = [
-      { id: 'lb-1', type: 'custom', position: { x: 100, y: 100 }, data: { label: 'LB', onDelete: () => {} } },
-      { id: 'app-1', type: 'custom', position: { x: 300, y: 100 }, data: { label: 'APP', onDelete: () => {} } },
-      { id: 'cache-1', type: 'custom', position: { x: 500, y: 100 }, data: { label: 'CACHE', onDelete: () => {} } },
-      { id: 'db-1', type: 'custom', position: { x: 700, y: 100 }, data: { label: 'DB', onDelete: () => {} } },
+      { id: 'lb-1', type: 'custom', position: { x: 200, y: 50 }, data: { label: 'LB', onDelete: () => {} } },
+      { id: 'app-1', type: 'custom', position: { x: 200, y: 150 }, data: { label: 'APP', onDelete: () => {} } },
+      { id: 'cache-1', type: 'custom', position: { x: 200, y: 250 }, data: { label: 'CACHE', onDelete: () => {} } },
+      { id: 'db-1', type: 'custom', position: { x: 200, y: 350 }, data: { label: 'DB', onDelete: () => {} } },
     ];
 
     const referenceEdges: Edge[] = [

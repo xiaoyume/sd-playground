@@ -1,42 +1,91 @@
 import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
-import { LoadBalancerIcon, AppServerIcon, DatabaseIcon, CacheIcon } from './icons';
+import { Network, Box, Database, Zap } from 'lucide-react';
 
-const getIcon = (label: string) => {
+interface NodeConfig {
+  icon: React.ReactNode;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  label: string;
+}
+
+const getNodeConfig = (label: string): NodeConfig => {
   const lowerLabel = label.toLowerCase();
+
   if (lowerLabel.includes('lb') || lowerLabel.includes('load balancer')) {
-    return <LoadBalancerIcon size={32} />;
+    return {
+      icon: <Network size={16} />,
+      color: '#3b82f6',
+      bgColor: '#eff6ff',
+      borderColor: '#93c5fd',
+      label: 'LB',
+    };
   }
   if (lowerLabel.includes('app') || lowerLabel.includes('server')) {
-    return <AppServerIcon size={32} />;
+    return {
+      icon: <Box size={16} />,
+      color: '#22c55e',
+      bgColor: '#f0fdf4',
+      borderColor: '#86efac',
+      label: 'APP',
+    };
   }
   if (lowerLabel.includes('db') || lowerLabel.includes('database')) {
-    return <DatabaseIcon size={32} />;
+    return {
+      icon: <Database size={16} />,
+      color: '#f97316',
+      bgColor: '#fff7ed',
+      borderColor: '#fdba74',
+      label: 'DB',
+    };
   }
   if (lowerLabel.includes('cache')) {
-    return <CacheIcon size={32} />;
+    return {
+      icon: <Zap size={16} />,
+      color: '#a855f7',
+      bgColor: '#faf5ff',
+      borderColor: '#d8b4fe',
+      label: 'CACHE',
+    };
   }
-  return null;
+
+  return {
+    icon: <Box size={16} />,
+    color: '#6b7280',
+    bgColor: '#f9fafb',
+    borderColor: '#d1d5db',
+    label: label,
+  };
 };
 
-const CustomNode: React.FC<NodeProps> = ({ data, id }) => {
+const CustomNode: React.FC<NodeProps> = ({ data, id, selected }) => {
+  const config = getNodeConfig(data.label);
+
   const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();
     data.onDelete(id);
   };
 
   return (
-    <div className="custom-node">
-      <Handle type="target" position={Position.Top} />
+    <div
+      className={`custom-node ${selected ? 'custom-node-selected' : ''}`}
+      style={{
+        '--node-color': config.color,
+        '--node-bg': config.bgColor,
+        '--node-border': config.borderColor,
+      } as React.CSSProperties}
+    >
+      <Handle type="target" position={Position.Top} className="custom-node-handle" />
       <div className="custom-node-content">
-        <div className="custom-node-icon">{getIcon(data.label)}</div>
-        <div className="custom-node-label">{data.label}</div>
+        <div className="custom-node-icon">{config.icon}</div>
+        <div className="custom-node-label">{config.label}</div>
       </div>
       <button className="custom-node-delete" onClick={handleDelete} title="Delete node">
         ×
       </button>
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={Position.Bottom} className="custom-node-handle" />
     </div>
   );
 };

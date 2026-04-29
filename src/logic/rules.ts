@@ -1,6 +1,8 @@
 import type { Node, Edge } from 'reactflow';
 import { getNodeCapacity, getLoadPercentage, getLoadStatus } from './capacity';
 import { calculateNodeLoad, calculateEffectiveDBLoad } from './traffic';
+import { runRules } from '../engine/ruleEngine';
+import type { RuleResult } from '../engine/types';
 
 export interface NodeLoadInfo {
   nodeId: string;
@@ -24,39 +26,48 @@ export interface AnalysisResult {
   nodeLoadInfo: NodeLoadInfo[];
 }
 
-export function analyze(nodes: Node[], _edges: Edge[], qps?: number): AnalysisResult {
+function mapRuleResultsToAnalysis(ruleResults: RuleResult[]): {
+  issues: string[];
+  suggestions: string[];
+  bottlenecks: string[];
+} {
   const issues: string[] = [];
   const suggestions: string[] = [];
   const bottlenecks: string[] = [];
-  const nodeLoadInfo: NodeLoadInfo[] = [];
 
+  for (const result of ruleResults) {
+    switch (result.type) {
+      case 'issue':
+        bottlenecks.push(result.message);
+        break;
+      case 'warning':
+        suggestions.push(result.message);
+        break;
+      case 'suggestion':
+        suggestions.push(result.message);
+        break;
+    }
+  }
+
+  return { issues, suggestions, bottlenecks };
+}
+
+export function analyze(nodes: Node[], edges: Edge[], qps?: number): AnalysisResult {
+  // Run plugin-based rules
+  const ruleResults = runRules({ nodes, edges, qps });
+  const { issues, suggestions, bottlenecks } = mapRuleResultsToAnalysis(ruleResults);
+
+  const nodeLoadInfo: NodeLoadInfo[] = [];
   let appLoad = 0;
   let dbLoad = 0;
   let cacheSaved = 0;
 
-  // Check for database
-  const dbNodes = nodes.filter((node) => node.data.label.toLowerCase().includes('db'));
-  if (dbNodes.length === 0) {
-    issues.push('Missing database');
-  } else if (dbNodes.length === 1) {
-    suggestions.push('Single point of failure - consider adding database replication');
-  }
-
-  // Check for cache
-  const cacheNodes = nodes.filter((node) => node.data.label.toLowerCase().includes('cache'));
-  const hasCache = cacheNodes.length > 0;
-  if (!hasCache) {
-    suggestions.push('No cache, poor read performance');
-  }
-
-  // Check for load balancer
-  const lbNodes = nodes.filter((node) => node.data.label.toLowerCase().includes('lb'));
-  if (lbNodes.length === 0) {
-    suggestions.push('No load balancer, poor scalability');
-  }
-
   // Traffic analysis if QPS is provided
   if (qps !== undefined && qps > 0) {
+    const hasCache = nodes.some((node) =>
+      node.data.label.toLowerCase().includes('cache')
+    );
+
     // Calculate traffic distribution
     const trafficResult = calculateEffectiveDBLoad(qps, hasCache);
     appLoad = qps;
@@ -80,28 +91,7 @@ export function analyze(nodes: Node[], _edges: Edge[], qps?: number): AnalysisRe
         loadPercentage,
         status,
       });
-
-      // Check for bottlenecks
-      if (status === 'overloaded') {
-        bottlenecks.push(
-          `Node ${node.data.label} overloaded (QPS: ${Math.round(currentQps)} > capacity: ${maxQps})`
-        );
-      }
     });
-
-    // Generate suggestions based on load
-    if (bottlenecks.length > 0) {
-      if (!hasCache) {
-        suggestions.push('Add cache to reduce database load');
-      }
-      if (dbNodes.length < 2) {
-        suggestions.push('Scale DB (replication/sharding)');
-      }
-      if (lbNodes.length === 0) {
-        suggestions.push('Add load balancer for better distribution');
-      }
-      suggestions.push('Consider adding more app servers');
-    }
   }
 
   return {

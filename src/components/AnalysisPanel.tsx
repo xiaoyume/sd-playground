@@ -1,22 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import useStore from '../store/useStore';
 import { analyze } from '../logic/rules';
+import useI18n from '../i18n/useI18n';
 import type { Node, Edge } from 'reactflow';
 
 const AnalysisPanel: React.FC = () => {
   const { nodes, edges, analysisResult, setAnalysisResult, setNodes, setEdges } = useStore();
+  const { t } = useI18n();
+  const [qps, setQps] = useState<number>(1000);
 
   const handleAnalyze = () => {
     const result = analyze(nodes, edges);
     setAnalysisResult(result);
   };
 
+  const handleSimulate = () => {
+    const result = analyze(nodes, edges, qps);
+    setAnalysisResult(result);
+  };
+
   const handleLoadReference = () => {
     const referenceNodes: Node[] = [
-      { id: 'lb-1', type: 'default', position: { x: 100, y: 100 }, data: { label: 'LB' } },
-      { id: 'app-1', type: 'default', position: { x: 300, y: 100 }, data: { label: 'APP' } },
-      { id: 'cache-1', type: 'default', position: { x: 500, y: 100 }, data: { label: 'CACHE' } },
-      { id: 'db-1', type: 'default', position: { x: 700, y: 100 }, data: { label: 'DB' } },
+      { id: 'lb-1', type: 'custom', position: { x: 100, y: 100 }, data: { label: 'LB', onDelete: () => {} } },
+      { id: 'app-1', type: 'custom', position: { x: 300, y: 100 }, data: { label: 'APP', onDelete: () => {} } },
+      { id: 'cache-1', type: 'custom', position: { x: 500, y: 100 }, data: { label: 'CACHE', onDelete: () => {} } },
+      { id: 'db-1', type: 'custom', position: { x: 700, y: 100 }, data: { label: 'DB', onDelete: () => {} } },
     ];
 
     const referenceEdges: Edge[] = [
@@ -32,19 +40,35 @@ const AnalysisPanel: React.FC = () => {
 
   return (
     <div className="analysis-panel">
-      <h3>Analysis</h3>
+      <h3>{t.analysis.title}</h3>
+
+      <div className="qps-input">
+        <label htmlFor="qps">{t.analysis.trafficLabel}</label>
+        <input
+          id="qps"
+          type="number"
+          value={qps}
+          onChange={(e) => setQps(Number(e.target.value))}
+          min="0"
+          step="100"
+        />
+      </div>
+
       <button className="analyze-btn" onClick={handleAnalyze}>
-        Analyze
+        {t.analysis.analyze}
+      </button>
+      <button className="simulate-btn" onClick={handleSimulate}>
+        {t.analysis.simulate}
       </button>
       <button className="reference-btn" onClick={handleLoadReference}>
-        Load Reference
+        {t.analysis.loadReference}
       </button>
 
       {analysisResult && (
         <div className="analysis-results">
           {analysisResult.issues.length > 0 && (
             <div className="issues-section">
-              <h4>Issues</h4>
+              <h4>{t.analysis.issues}</h4>
               <ul>
                 {analysisResult.issues.map((issue, index) => (
                   <li key={index} className="issue-item">
@@ -55,9 +79,58 @@ const AnalysisPanel: React.FC = () => {
             </div>
           )}
 
+          {analysisResult.bottlenecks.length > 0 && (
+            <div className="bottlenecks-section">
+              <h4>{t.analysis.bottlenecks}</h4>
+              <ul>
+                {analysisResult.bottlenecks.map((bottleneck, index) => (
+                  <li key={index} className="bottleneck-item">
+                    {bottleneck}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {analysisResult.loadBreakdown.appLoad > 0 && (
+            <div className="load-breakdown-section">
+              <h4>{t.analysis.loadBreakdown}</h4>
+              <div className="load-item">
+                <span>{t.analysis.appLoad}</span>
+                <span>{Math.round(analysisResult.loadBreakdown.appLoad)} QPS</span>
+              </div>
+              <div className="load-item">
+                <span>{t.analysis.dbLoad}</span>
+                <span>{Math.round(analysisResult.loadBreakdown.dbLoad)} QPS</span>
+              </div>
+              {analysisResult.loadBreakdown.cacheSaved > 0 && (
+                <div className="load-item cache-saved">
+                  <span>{t.analysis.cacheSaved}</span>
+                  <span>{Math.round(analysisResult.loadBreakdown.cacheSaved)} QPS</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {analysisResult.nodeLoadInfo.length > 0 && (
+            <div className="node-status-section">
+              <h4>{t.analysis.nodeStatus}</h4>
+              <ul>
+                {analysisResult.nodeLoadInfo.map((node) => (
+                  <li key={node.nodeId} className={`node-status-${node.status}`}>
+                    <span className="node-label">{node.label}</span>
+                    <span className="node-load">
+                      {Math.round(node.loadPercentage)}%
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {analysisResult.suggestions.length > 0 && (
             <div className="suggestions-section">
-              <h4>Suggestions</h4>
+              <h4>{t.analysis.suggestions}</h4>
               <ul>
                 {analysisResult.suggestions.map((suggestion, index) => (
                   <li key={index} className="suggestion-item">
@@ -68,11 +141,13 @@ const AnalysisPanel: React.FC = () => {
             </div>
           )}
 
-          {analysisResult.issues.length === 0 && analysisResult.suggestions.length === 0 && (
-            <div className="no-issues">
-              <p>No issues found! Your architecture looks good.</p>
-            </div>
-          )}
+          {analysisResult.issues.length === 0 &&
+            analysisResult.bottlenecks.length === 0 &&
+            analysisResult.suggestions.length === 0 && (
+              <div className="no-issues">
+                <p>{t.analysis.noIssues}</p>
+              </div>
+            )}
         </div>
       )}
     </div>

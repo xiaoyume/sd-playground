@@ -1,10 +1,6 @@
 import { create } from 'zustand';
 import type { Node, Edge } from 'reactflow';
-
-interface AnalysisResult {
-  issues: string[];
-  suggestions: string[];
-}
+import type { AnalysisResult } from '../logic/rules';
 
 interface AppState {
   nodes: Node[];

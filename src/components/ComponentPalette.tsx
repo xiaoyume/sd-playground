@@ -1,19 +1,23 @@
 import React from 'react';
+import { LoadBalancerIcon, AppServerIcon, DatabaseIcon, CacheIcon } from './icons';
+import useI18n from '../i18n/useI18n';
 
 interface PaletteItem {
   type: string;
-  label: string;
-  icon: string;
+  labelKey: 'loadBalancer' | 'appServer' | 'database' | 'cache';
+  icon: React.ReactNode;
 }
 
 const items: PaletteItem[] = [
-  { type: 'lb', label: 'Load Balancer', icon: '⚖️' },
-  { type: 'app', label: 'App Server', icon: '🖥️' },
-  { type: 'db', label: 'Database', icon: '🗄️' },
-  { type: 'cache', label: 'Cache', icon: '⚡' },
+  { type: 'lb', labelKey: 'loadBalancer', icon: <LoadBalancerIcon /> },
+  { type: 'app', labelKey: 'appServer', icon: <AppServerIcon /> },
+  { type: 'db', labelKey: 'database', icon: <DatabaseIcon /> },
+  { type: 'cache', labelKey: 'cache', icon: <CacheIcon /> },
 ];
 
 const ComponentPalette: React.FC = () => {
+  const { t } = useI18n();
+
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
@@ -21,7 +25,7 @@ const ComponentPalette: React.FC = () => {
 
   return (
     <div className="component-palette">
-      <h3>Components</h3>
+      <h3>{t.components.title}</h3>
       <div className="palette-items">
         {items.map((item) => (
           <div
@@ -31,7 +35,7 @@ const ComponentPalette: React.FC = () => {
             onDragStart={(event) => onDragStart(event, item.type)}
           >
             <span className="palette-icon">{item.icon}</span>
-            <span className="palette-label">{item.label}</span>
+            <span className="palette-label">{t.components[item.labelKey]}</span>
           </div>
         ))}
       </div>

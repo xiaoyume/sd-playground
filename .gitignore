@@ -31,6 +31,9 @@ lerna-debug.log*
 # Claude Code
 .claude/
 
+# Prompt files
+prompt/
+
 # Project documentation (optional)
 # mvp.md
 

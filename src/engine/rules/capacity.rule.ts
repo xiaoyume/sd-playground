@@ -1,34 +1,28 @@
 import type { Rule, RuleContext, RuleResult } from '../types';
+import { computeTraffic, getNodeTraffic } from '../trafficModel';
 
 const NODE_CAPACITY: Record<string, number> = {
+  cdn: 200000,
+  gateway: 100000,
   lb: 100000,
   app: 10000,
   cache: 50000,
+  'db-primary': 5000,
+  'db-replica': 8000,
   db: 5000,
 };
 
 function getNodeType(label: string): string {
   const lowerLabel = label.toLowerCase();
+  if (lowerLabel.includes('cdn')) return 'cdn';
+  if (lowerLabel.includes('gateway')) return 'gateway';
   if (lowerLabel.includes('lb') || lowerLabel.includes('load balancer')) return 'lb';
   if (lowerLabel.includes('app') || lowerLabel.includes('server')) return 'app';
+  if (lowerLabel.includes('db-primary') || lowerLabel.includes('db primary')) return 'db-primary';
+  if (lowerLabel.includes('db-replica') || lowerLabel.includes('db replica')) return 'db-replica';
   if (lowerLabel.includes('db') || lowerLabel.includes('database')) return 'db';
   if (lowerLabel.includes('cache')) return 'cache';
   return 'app';
-}
-
-function calculateNodeLoad(qps: number, nodeType: string, hasCache: boolean): number {
-  switch (nodeType) {
-    case 'lb':
-    case 'app':
-    case 'cache':
-      return qps;
-    case 'db': {
-      const cacheHitRate = 0.7;
-      return hasCache ? qps * (1 - cacheHitRate) : qps;
-    }
-    default:
-      return qps;
-  }
 }
 
 export const capacityRule: Rule = {
@@ -44,10 +38,17 @@ export const capacityRule: Rule = {
       node.data.label.toLowerCase().includes('cache')
     );
 
+    const hasReplica = ctx.nodes.some((node) =>
+      node.data.label.toLowerCase().includes('db-replica') ||
+      node.data.label.toLowerCase().includes('db replica')
+    );
+
+    const traffic = computeTraffic(ctx.qps, hasCache, hasReplica);
+
     ctx.nodes.forEach((node) => {
       const nodeType = getNodeType(node.data.label);
       const maxQps = NODE_CAPACITY[nodeType] || 0;
-      const currentQps = calculateNodeLoad(ctx.qps!, nodeType, hasCache);
+      const currentQps = getNodeTraffic(nodeType, traffic, hasCache, hasReplica);
       const loadPercentage = maxQps > 0 ? (currentQps / maxQps) * 100 : 0;
 
       if (loadPercentage > 100) {

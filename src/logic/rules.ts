@@ -1,8 +1,9 @@
 import type { Node, Edge } from 'reactflow';
 import { getNodeCapacity, getLoadPercentage, getLoadStatus } from './capacity';
-import { calculateNodeLoad, calculateEffectiveDBLoad } from './traffic';
 import { runRules } from '../engine/ruleEngine';
+import { computeTraffic, getNodeTraffic } from '../engine/trafficModel';
 import type { RuleResult, Rule } from '../engine/types';
+import type { TrafficBreakdown } from '../engine/trafficModel';
 
 export interface NodeLoadInfo {
   nodeId: string;
@@ -19,6 +20,7 @@ export interface AnalysisResult {
   suggestions: string[];
   bottlenecks: string[];
   bottleneckNodeIds: string[];
+  trafficBreakdown: TrafficBreakdown | null;
   loadBreakdown: {
     appLoad: number;
     dbLoad: number;
@@ -58,6 +60,19 @@ function mapRuleResultsToAnalysis(ruleResults: RuleResult[]): {
   return { issues, suggestions, bottlenecks, bottleneckNodeIds };
 }
 
+function getNodeType(label: string): string {
+  const lowerLabel = label.toLowerCase();
+  if (lowerLabel.includes('cdn')) return 'cdn';
+  if (lowerLabel.includes('gateway')) return 'gateway';
+  if (lowerLabel.includes('lb') || lowerLabel.includes('load balancer')) return 'lb';
+  if (lowerLabel.includes('app') || lowerLabel.includes('server')) return 'app';
+  if (lowerLabel.includes('db-primary') || lowerLabel.includes('db primary')) return 'db-primary';
+  if (lowerLabel.includes('db-replica') || lowerLabel.includes('db replica')) return 'db-replica';
+  if (lowerLabel.includes('db') || lowerLabel.includes('database')) return 'db';
+  if (lowerLabel.includes('cache')) return 'cache';
+  return 'app';
+}
+
 export function analyze(
   nodes: Node[],
   edges: Edge[],
@@ -71,6 +86,7 @@ export function analyze(
   const { issues, suggestions, bottlenecks, bottleneckNodeIds } = mapRuleResultsToAnalysis(ruleResults);
 
   const nodeLoadInfo: NodeLoadInfo[] = [];
+  let trafficBreakdown: TrafficBreakdown | null = null;
   let appLoad = 0;
   let dbLoad = 0;
   let cacheSaved = 0;
@@ -81,17 +97,22 @@ export function analyze(
       node.data.label.toLowerCase().includes('cache')
     );
 
+    const hasReplica = nodes.some((node) =>
+      node.data.label.toLowerCase().includes('db-replica') ||
+      node.data.label.toLowerCase().includes('db replica')
+    );
+
     // Calculate traffic distribution
-    const trafficResult = calculateEffectiveDBLoad(qps, hasCache);
+    trafficBreakdown = computeTraffic(qps, hasCache, hasReplica);
     appLoad = qps;
-    dbLoad = trafficResult.dbQps;
-    cacheSaved = trafficResult.cacheSavedQps;
+    dbLoad = trafficBreakdown.dbReadQps + trafficBreakdown.dbWriteQps;
+    cacheSaved = trafficBreakdown.cacheHitQps;
 
     // Analyze each node
     nodes.forEach((node) => {
       const nodeType = getNodeType(node.data.label);
       const maxQps = getNodeCapacity(nodeType);
-      const currentQps = calculateNodeLoad(qps, nodeType, hasCache);
+      const currentQps = getNodeTraffic(nodeType, trafficBreakdown!, hasCache, hasReplica);
       const loadPercentage = getLoadPercentage(currentQps, maxQps);
       const status = getLoadStatus(loadPercentage);
 
@@ -112,6 +133,7 @@ export function analyze(
     suggestions,
     bottlenecks,
     bottleneckNodeIds,
+    trafficBreakdown,
     loadBreakdown: {
       appLoad,
       dbLoad,
@@ -128,13 +150,4 @@ function runScenarioRules(rules: Rule[], ctx: { nodes: Node[]; edges: Edge[]; qp
     results.push(...ruleResults);
   }
   return results;
-}
-
-function getNodeType(label: string): string {
-  const lowerLabel = label.toLowerCase();
-  if (lowerLabel.includes('lb') || lowerLabel.includes('load balancer')) return 'lb';
-  if (lowerLabel.includes('app') || lowerLabel.includes('server')) return 'app';
-  if (lowerLabel.includes('db') || lowerLabel.includes('database')) return 'db';
-  if (lowerLabel.includes('cache')) return 'cache';
-  return 'app';
 }

@@ -47,21 +47,28 @@ const AnalysisPanel: React.FC = () => {
   };
 
   const handleLoadReference = () => {
-    const referenceNodes: Node[] = [
-      { id: 'lb-1', type: 'custom', position: { x: 200, y: 50 }, data: { label: 'LB', onDelete: () => {} } },
-      { id: 'app-1', type: 'custom', position: { x: 200, y: 150 }, data: { label: 'APP', onDelete: () => {} } },
-      { id: 'cache-1', type: 'custom', position: { x: 200, y: 250 }, data: { label: 'CACHE', onDelete: () => {} } },
-      { id: 'db-1', type: 'custom', position: { x: 200, y: 350 }, data: { label: 'DB', onDelete: () => {} } },
-    ];
+    // Use scenario initial graph if available
+    if (currentScenario?.initialGraph) {
+      setNodes(currentScenario.initialGraph.nodes);
+      setEdges(currentScenario.initialGraph.edges);
+    } else {
+      // Default reference architecture
+      const referenceNodes: Node[] = [
+        { id: 'lb-1', type: 'custom', position: { x: 200, y: 50 }, data: { label: 'LB' } },
+        { id: 'app-1', type: 'custom', position: { x: 200, y: 150 }, data: { label: 'APP' } },
+        { id: 'cache-1', type: 'custom', position: { x: 200, y: 250 }, data: { label: 'CACHE' } },
+        { id: 'db-1', type: 'custom', position: { x: 200, y: 350 }, data: { label: 'DB' } },
+      ];
 
-    const referenceEdges: Edge[] = [
-      { id: 'e-lb-app', source: 'lb-1', target: 'app-1' },
-      { id: 'e-app-cache', source: 'app-1', target: 'cache-1' },
-      { id: 'e-cache-db', source: 'cache-1', target: 'db-1' },
-    ];
+      const referenceEdges: Edge[] = [
+        { id: 'e-lb-app', source: 'lb-1', target: 'app-1' },
+        { id: 'e-app-cache', source: 'app-1', target: 'cache-1' },
+        { id: 'e-cache-db', source: 'cache-1', target: 'db-1' },
+      ];
 
-    setNodes(referenceNodes);
-    setEdges(referenceEdges);
+      setNodes(referenceNodes);
+      setEdges(referenceEdges);
+    }
     setAnalysisResult(null);
     setIsSimulating(false);
   };
@@ -131,22 +138,39 @@ const AnalysisPanel: React.FC = () => {
 
       {analysisResult && (
         <div className="analysis-results">
-          {analysisResult.issues.length > 0 && (
-            <div className="issues-section">
-              <h4>{t.analysis.issues}</h4>
-              <ul>
-                {analysisResult.issues.map((issue, index) => (
-                  <li key={index} className="issue-item">
-                    {issue}
-                  </li>
-                ))}
-              </ul>
+          {analysisResult.trafficBreakdown && (
+            <div className="traffic-breakdown-section">
+              <h4>📊 Traffic Breakdown</h4>
+              <div className="traffic-item">
+                <span>Total QPS</span>
+                <span>{Math.round(analysisResult.trafficBreakdown.totalQps)}</span>
+              </div>
+              <div className="traffic-item">
+                <span>Read QPS</span>
+                <span>{Math.round(analysisResult.trafficBreakdown.readQps)}</span>
+              </div>
+              <div className="traffic-item">
+                <span>Write QPS</span>
+                <span>{Math.round(analysisResult.trafficBreakdown.writeQps)}</span>
+              </div>
+              <div className="traffic-item highlight">
+                <span>Cache Hit</span>
+                <span>{Math.round(analysisResult.trafficBreakdown.cacheHitQps)}</span>
+              </div>
+              <div className="traffic-item">
+                <span>DB Read</span>
+                <span>{Math.round(analysisResult.trafficBreakdown.dbReadQps)}</span>
+              </div>
+              <div className="traffic-item">
+                <span>DB Write</span>
+                <span>{Math.round(analysisResult.trafficBreakdown.dbWriteQps)}</span>
+              </div>
             </div>
           )}
 
           {analysisResult.bottlenecks.length > 0 && (
             <div className="bottlenecks-section">
-              <h4>{t.analysis.bottlenecks}</h4>
+              <h4>🚨 Bottlenecks</h4>
               <ul>
                 {analysisResult.bottlenecks.map((bottleneck, index) => (
                   <li key={index} className="bottleneck-item">
@@ -157,29 +181,9 @@ const AnalysisPanel: React.FC = () => {
             </div>
           )}
 
-          {analysisResult.loadBreakdown.appLoad > 0 && (
-            <div className="load-breakdown-section">
-              <h4>{t.analysis.loadBreakdown}</h4>
-              <div className="load-item">
-                <span>{t.analysis.appLoad}</span>
-                <span>{Math.round(analysisResult.loadBreakdown.appLoad)} QPS</span>
-              </div>
-              <div className="load-item">
-                <span>{t.analysis.dbLoad}</span>
-                <span>{Math.round(analysisResult.loadBreakdown.dbLoad)} QPS</span>
-              </div>
-              {analysisResult.loadBreakdown.cacheSaved > 0 && (
-                <div className="load-item cache-saved">
-                  <span>{t.analysis.cacheSaved}</span>
-                  <span>{Math.round(analysisResult.loadBreakdown.cacheSaved)} QPS</span>
-                </div>
-              )}
-            </div>
-          )}
-
           {analysisResult.nodeLoadInfo.length > 0 && (
             <div className="node-status-section">
-              <h4>{t.analysis.nodeStatus}</h4>
+              <h4>Node Status</h4>
               <ul>
                 {analysisResult.nodeLoadInfo.map((node) => (
                   <li key={node.nodeId} className={`node-status-${node.status}`}>
@@ -195,7 +199,7 @@ const AnalysisPanel: React.FC = () => {
 
           {analysisResult.suggestions.length > 0 && (
             <div className="suggestions-section">
-              <h4>{t.analysis.suggestions}</h4>
+              <h4>💡 Suggestions</h4>
               <ul>
                 {analysisResult.suggestions.map((suggestion, index) => (
                   <li key={index} className="suggestion-item">
@@ -206,11 +210,24 @@ const AnalysisPanel: React.FC = () => {
             </div>
           )}
 
+          {analysisResult.issues.length > 0 && (
+            <div className="issues-section">
+              <h4>⚠️ Issues</h4>
+              <ul>
+                {analysisResult.issues.map((issue, index) => (
+                  <li key={index} className="issue-item">
+                    {issue}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {analysisResult.issues.length === 0 &&
             analysisResult.bottlenecks.length === 0 &&
             analysisResult.suggestions.length === 0 && (
               <div className="no-issues">
-                <p>{t.analysis.noIssues}</p>
+                <p>No issues detected</p>
               </div>
             )}
         </div>

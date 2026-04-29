@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
-import { Network, Box, Database, Zap } from 'lucide-react';
+import { Network, Box, Database, Zap, Globe, Shield, Server } from 'lucide-react';
 
 interface NodeConfig {
   icon: React.ReactNode;
@@ -14,6 +14,24 @@ interface NodeConfig {
 const getNodeConfig = (label: string): NodeConfig => {
   const lowerLabel = label.toLowerCase();
 
+  if (lowerLabel.includes('cdn')) {
+    return {
+      icon: <Globe size={16} />,
+      color: '#06b6d4',
+      bgColor: '#ecfeff',
+      borderColor: '#67e8f9',
+      label: 'CDN',
+    };
+  }
+  if (lowerLabel.includes('gateway')) {
+    return {
+      icon: <Shield size={16} />,
+      color: '#8b5cf6',
+      bgColor: '#f5f3ff',
+      borderColor: '#c4b5fd',
+      label: 'GW',
+    };
+  }
   if (lowerLabel.includes('lb') || lowerLabel.includes('load balancer')) {
     return {
       icon: <Network size={16} />,
@@ -25,11 +43,29 @@ const getNodeConfig = (label: string): NodeConfig => {
   }
   if (lowerLabel.includes('app') || lowerLabel.includes('server')) {
     return {
-      icon: <Box size={16} />,
+      icon: <Server size={16} />,
       color: '#22c55e',
       bgColor: '#f0fdf4',
       borderColor: '#86efac',
       label: 'APP',
+    };
+  }
+  if (lowerLabel.includes('db-primary') || lowerLabel.includes('db primary')) {
+    return {
+      icon: <Database size={16} />,
+      color: '#f97316',
+      bgColor: '#fff7ed',
+      borderColor: '#fdba74',
+      label: 'DB-P',
+    };
+  }
+  if (lowerLabel.includes('db-replica') || lowerLabel.includes('db replica')) {
+    return {
+      icon: <Database size={16} />,
+      color: '#fb923c',
+      bgColor: '#fff7ed',
+      borderColor: '#fdba74',
+      label: 'DB-R',
     };
   }
   if (lowerLabel.includes('db') || lowerLabel.includes('database')) {

@@ -142,10 +142,18 @@ const Canvas: React.FC = () => {
     return ids;
   }, [edges]);
 
-  // Apply node styles based on analysis result
+  // Apply node styles and inject onDelete callback
   const styledNodes = useMemo(() => {
+    const nodesWithDelete = nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        onDelete,
+      },
+    }));
+
     if (!analysisResult || !analysisResult.nodeLoadInfo || analysisResult.nodeLoadInfo.length === 0) {
-      return nodes.map((node) => {
+      return nodesWithDelete.map((node) => {
         let className = '';
         if (isSimulating) {
           className = connectedNodeIds.has(node.id) ? 'node-active' : 'node-inactive';
@@ -154,7 +162,7 @@ const Canvas: React.FC = () => {
       });
     }
 
-    return nodes.map((node) => {
+    return nodesWithDelete.map((node) => {
       const loadInfo = analysisResult.nodeLoadInfo.find((info) => info.nodeId === node.id);
 
       let className = '';
@@ -174,7 +182,7 @@ const Canvas: React.FC = () => {
         className,
       };
     });
-  }, [nodes, analysisResult, isSimulating, connectedNodeIds]);
+  }, [nodes, analysisResult, isSimulating, connectedNodeIds, onDelete]);
 
   // Apply edge animation props
   const animatedEdges = useMemo(() => {

@@ -11,7 +11,12 @@ export const cacheRule: Rule = {
     if (cacheNodes.length === 0) {
       results.push({
         type: 'warning',
-        message: 'No cache, poor read performance',
+        message: 'No cache - high DB load due to no caching layer',
+      });
+    } else if (ctx.qps && ctx.qps > 0) {
+      results.push({
+        type: 'suggestion',
+        message: 'Cache layer active - reducing DB read load by ~70%',
       });
     }
 

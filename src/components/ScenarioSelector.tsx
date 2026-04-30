@@ -4,19 +4,11 @@ import useStore from '../store/useStore';
 import type { Scenario } from '../scenarios/types';
 
 const ScenarioSelector: React.FC = () => {
-  const { setCurrentScenario, setNodes, setEdges, setAnalysisResult } = useStore();
+  const { setCurrentScenario } = useStore();
   const scenarios = getScenarios();
 
   const handleSelectScenario = (scenario: Scenario) => {
     setCurrentScenario(scenario);
-    if (scenario.initialGraph) {
-      setNodes(scenario.initialGraph.nodes);
-      setEdges(scenario.initialGraph.edges);
-    } else {
-      setNodes([]);
-      setEdges([]);
-    }
-    setAnalysisResult(null);
   };
 
   return (

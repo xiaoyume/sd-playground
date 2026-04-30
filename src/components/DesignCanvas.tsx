@@ -3,9 +3,9 @@ import ReactFlow, {
   addEdge,
   useNodesState,
   useEdgesState,
+  ReactFlowProvider,
   Controls,
   Background,
-  ReactFlowProvider,
 } from 'reactflow';
 import type { Connection, Node, ReactFlowInstance } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -21,21 +21,45 @@ const edgeTypes = {
   animated: AnimatedEdge,
 };
 
-const Canvas: React.FC = () => {
+interface DesignCanvasProps {
+  designId: string;
+}
+
+const DesignCanvasInner: React.FC<DesignCanvasProps> = ({ designId }) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const isInitialized = useRef(false);
+  const isUpdating = useRef(false);
 
   const {
-    nodes: storeNodes,
-    edges: storeEdges,
-    setNodes: setStoreNodes,
-    setEdges: setStoreEdges,
-    analysisResult,
-    isSimulating,
-    animationSpeed,
+    updateDesignGraph,
+    getDesignById,
   } = useStore();
+
+  const design = getDesignById(designId);
+  const isSimulating = design?.isSimulating ?? false;
+  const animationSpeed = design?.animationSpeed ?? 1;
+
+  // Initialize from store on mount
+  useEffect(() => {
+    if (design && !isInitialized.current) {
+      isUpdating.current = true;
+      setNodes(design.nodes);
+      setEdges(design.edges);
+      isInitialized.current = true;
+      // Wait for state to settle before allowing sync back
+      setTimeout(() => { isUpdating.current = false; }, 0);
+    }
+  }, [designId]);
+
+  // Sync local changes back to store (only when user makes changes)
+  useEffect(() => {
+    if (isInitialized.current && !isUpdating.current) {
+      updateDesignGraph(designId, nodes, edges);
+    }
+  }, [nodes, edges, designId]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, type: 'animated' }, eds)),
@@ -58,12 +82,8 @@ const Canvas: React.FC = () => {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-
       const type = event.dataTransfer.getData('application/reactflow');
-
-      if (typeof type === 'undefined' || !type || !reactFlowInstance) {
-        return;
-      }
+      if (typeof type === 'undefined' || !type || !reactFlowInstance) return;
 
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
@@ -86,52 +106,6 @@ const Canvas: React.FC = () => {
     setReactFlowInstance(instance);
   }, []);
 
-  const isSyncingFromStore = useRef(false);
-  const prevStoreNodesRef = useRef<string>('');
-  const prevStoreEdgesRef = useRef<string>('');
-
-  // Sync store → local when store changes (e.g., "Load Reference" click)
-  useEffect(() => {
-    const storeNodesStr = JSON.stringify(storeNodes);
-    if (storeNodesStr !== prevStoreNodesRef.current) {
-      prevStoreNodesRef.current = storeNodesStr;
-      const localNodesStr = JSON.stringify(nodes);
-      if (storeNodesStr !== localNodesStr) {
-        isSyncingFromStore.current = true;
-        setNodes(storeNodes);
-      }
-    }
-  }, [storeNodes]);
-
-  useEffect(() => {
-    const storeEdgesStr = JSON.stringify(storeEdges);
-    if (storeEdgesStr !== prevStoreEdgesRef.current) {
-      prevStoreEdgesRef.current = storeEdgesStr;
-      const localEdgesStr = JSON.stringify(edges);
-      if (storeEdgesStr !== localEdgesStr) {
-        isSyncingFromStore.current = true;
-        setEdges(storeEdges);
-      }
-    }
-  }, [storeEdges]);
-
-  // Update store when local nodes/edges change
-  useEffect(() => {
-    if (isSyncingFromStore.current) {
-      isSyncingFromStore.current = false;
-      return;
-    }
-    setStoreNodes(nodes);
-  }, [nodes, setStoreNodes]);
-
-  useEffect(() => {
-    if (isSyncingFromStore.current) {
-      isSyncingFromStore.current = false;
-      return;
-    }
-    setStoreEdges(edges);
-  }, [edges, setStoreEdges]);
-
   // Get connected node IDs from edges
   const connectedNodeIds = useMemo(() => {
     const ids = new Set<string>();
@@ -144,12 +118,10 @@ const Canvas: React.FC = () => {
 
   // Apply node styles and inject onDelete callback
   const styledNodes = useMemo(() => {
+    const analysisResult = design?.analysisResult;
     const nodesWithDelete = nodes.map((node) => ({
       ...node,
-      data: {
-        ...node.data,
-        onDelete,
-      },
+      data: { ...node.data, onDelete },
     }));
 
     if (!analysisResult || !analysisResult.nodeLoadInfo || analysisResult.nodeLoadInfo.length === 0) {
@@ -164,42 +136,30 @@ const Canvas: React.FC = () => {
 
     return nodesWithDelete.map((node) => {
       const loadInfo = analysisResult.nodeLoadInfo.find((info) => info.nodeId === node.id);
-
       let className = '';
       if (isSimulating) {
         className = connectedNodeIds.has(node.id) ? 'node-active' : 'node-inactive';
       }
       if (loadInfo) {
-        if (loadInfo.status === 'warning') {
-          className = 'node-warning';
-        } else if (loadInfo.status === 'overloaded') {
-          className = 'node-overloaded';
-        }
+        if (loadInfo.status === 'warning') className = 'node-warning';
+        else if (loadInfo.status === 'overloaded') className = 'node-overloaded';
       }
-
-      return {
-        ...node,
-        className,
-      };
+      return { ...node, className };
     });
-  }, [nodes, analysisResult, isSimulating, connectedNodeIds, onDelete]);
+  }, [nodes, design?.analysisResult, isSimulating, connectedNodeIds, onDelete]);
 
   // Apply edge animation props
   const animatedEdges = useMemo(() => {
+    const analysisResult = design?.analysisResult;
     return edges.map((edge) => {
       const isBottleneck = analysisResult?.bottleneckNodeIds?.includes(edge.target) || false;
-
       return {
         ...edge,
         type: 'animated',
-        data: {
-          isSimulating,
-          animationSpeed,
-          isBottleneck,
-        },
+        data: { isSimulating, animationSpeed, isBottleneck },
       };
     });
-  }, [edges, isSimulating, animationSpeed, analysisResult]);
+  }, [edges, isSimulating, animationSpeed, design?.analysisResult]);
 
   return (
     <div className="canvas" ref={reactFlowWrapper}>
@@ -223,10 +183,10 @@ const Canvas: React.FC = () => {
   );
 };
 
-const CanvasWithProvider: React.FC = () => (
+const DesignCanvas: React.FC<DesignCanvasProps> = (props) => (
   <ReactFlowProvider>
-    <Canvas />
+    <DesignCanvasInner {...props} />
   </ReactFlowProvider>
 );
 
-export default CanvasWithProvider;
+export default DesignCanvas;

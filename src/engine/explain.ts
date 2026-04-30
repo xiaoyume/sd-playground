@@ -36,6 +36,7 @@ export function explainDesign(
 
   const hasCache = nodes.some((n) => getNodeType(n).includes('cache'));
   const hasReplica = nodes.some((n) => getNodeType(n).includes('db-replica') || getNodeType(n).includes('replica'));
+  const hasIdGenerator = nodes.some((n) => getNodeType(n).includes('id-generator') || getNodeType(n).includes('id generator'));
 
   // Node explanations
   nodes.forEach((node) => {
@@ -56,6 +57,15 @@ export function explainDesign(
     } else if (type.includes('lb')) {
       role = 'Load Balancer';
       reasoning = 'Distributes traffic across multiple application servers';
+    } else if (type.includes('redirect')) {
+      role = 'Redirect Service';
+      reasoning = 'Handles HTTP 302 redirects for short URL resolution';
+    } else if (type.includes('write')) {
+      role = 'Write Service';
+      reasoning = 'Handles URL creation requests and writes mapping to DB';
+    } else if (type.includes('id-generator') || type.includes('id generator')) {
+      role = 'ID Generator';
+      reasoning = 'Generates unique short codes using selected strategy';
     } else if (type.includes('app')) {
       role = 'Application Server';
       reasoning = `Processing all incoming requests (${result?.trafficBreakdown?.totalQps || 0} QPS)`;
@@ -96,11 +106,19 @@ export function explainDesign(
       explanation: 'Incoming requests per second',
     });
 
+    if (tb.hotKeyEnabled) {
+      metricExplanations.push({
+        metric: 'Hot Key Traffic',
+        value: `${Math.round(tb.hotQps)} QPS`,
+        explanation: '20% of traffic concentrated on a single key',
+      });
+    }
+
     if (hasCache) {
       metricExplanations.push({
         metric: 'Cache Impact',
         value: `${Math.round(tb.cacheHitQps)} QPS saved`,
-        explanation: `Cache serves ${Math.round(tb.cacheHitQps)} QPS, reducing DB load by ~70%`,
+        explanation: `Cache serves ${Math.round(tb.cacheHitQps)} QPS, reducing DB load significantly`,
       });
     }
 
@@ -156,6 +174,10 @@ export function explainDesign(
     pros.push('Replica improves read scalability');
   } else {
     cons.push('No replica limits read capacity');
+  }
+
+  if (hasIdGenerator) {
+    pros.push('ID generator enables scalable short code creation');
   }
 
   if (result?.bottlenecks && result.bottlenecks.length > 0) {

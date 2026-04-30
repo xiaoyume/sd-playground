@@ -68,6 +68,9 @@ function getNodeType(label: string): string {
   if (lowerLabel.includes('cdn')) return 'cdn';
   if (lowerLabel.includes('gateway')) return 'gateway';
   if (lowerLabel.includes('lb') || lowerLabel.includes('load balancer')) return 'lb';
+  if (lowerLabel.includes('redirect')) return 'redirect';
+  if (lowerLabel.includes('write')) return 'write';
+  if (lowerLabel.includes('id-generator') || lowerLabel.includes('id generator')) return 'id-generator';
   if (lowerLabel.includes('app') || lowerLabel.includes('server')) return 'app';
   if (lowerLabel.includes('db-primary') || lowerLabel.includes('db primary')) return 'db-primary';
   if (lowerLabel.includes('db-replica') || lowerLabel.includes('db replica')) return 'db-replica';
@@ -80,11 +83,12 @@ export function analyze(
   nodes: Node[],
   edges: Edge[],
   qps?: number,
-  scenarioRules?: Rule[]
+  scenarioRules?: Rule[],
+  hotKeyEnabled: boolean = false
 ): AnalysisResult {
   // Run plugin-based rules (scenario-specific or global)
   const ruleResults = scenarioRules
-    ? runScenarioRules(scenarioRules, { nodes, edges, qps })
+    ? runScenarioRules(scenarioRules, { nodes, edges, qps, hotKeyEnabled })
     : runRules({ nodes, edges, qps });
   const { issues, suggestions, bottlenecks, bottleneckNodeIds } = mapRuleResultsToAnalysis(ruleResults);
 
@@ -107,7 +111,7 @@ export function analyze(
     );
 
     // Calculate traffic distribution
-    trafficBreakdown = computeTraffic(qps, hasCache, hasReplica);
+    trafficBreakdown = computeTraffic(qps, hasCache, hasReplica, 0.9, 0.7, hotKeyEnabled);
     appLoad = qps;
     dbLoad = trafficBreakdown.dbReadQps + trafficBreakdown.dbWriteQps;
     cacheSaved = trafficBreakdown.cacheHitQps;
@@ -151,7 +155,7 @@ export function analyze(
   };
 }
 
-function runScenarioRules(rules: Rule[], ctx: { nodes: Node[]; edges: Edge[]; qps?: number }): RuleResult[] {
+function runScenarioRules(rules: Rule[], ctx: { nodes: Node[]; edges: Edge[]; qps?: number; hotKeyEnabled?: boolean }): RuleResult[] {
   const results: RuleResult[] = [];
   for (const rule of rules) {
     const ruleResults = rule.run(ctx);

@@ -10,7 +10,9 @@ const FreeCreationView: React.FC = () => {
     designs,
     currentScenario,
     qps,
+    hotKeyEnabled,
     setQps,
+    setHotKeyEnabled,
     createDesign,
     resetDesign,
     setCurrentScenario,
@@ -56,6 +58,14 @@ const FreeCreationView: React.FC = () => {
             step="100"
             className="qps-input-small"
           />
+          <label className="hotkey-toggle">
+            <input
+              type="checkbox"
+              checked={hotKeyEnabled}
+              onChange={(e) => setHotKeyEnabled(e.target.checked)}
+            />
+            <span>🔥 Hot Key</span>
+          </label>
           <button className="reset-btn-small" onClick={() => resetDesign(design.id)}>
             {t.comparison.reset}
           </button>

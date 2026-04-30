@@ -4,6 +4,7 @@ import type { AnalysisResult } from '../logic/rules';
 import type { Scenario } from '../scenarios/types';
 
 export type AppMode = 'comparison' | 'free';
+export type AppView = 'playground' | 'learn';
 
 export interface Design {
   id: string;
@@ -16,21 +17,31 @@ export interface Design {
 }
 
 interface AppState {
+  // View
+  appView: AppView;
+
   // Mode
   appMode: AppMode;
 
   // Scenario
   currentScenario: Scenario | null;
   qps: number;
+  hotKeyEnabled: boolean;
+
+  // Learn
+  learnTopicId: string | null;
 
   // Designs
   designs: Design[];
   activeDesignId: string | null;
 
   // Actions
+  setAppView: (view: AppView) => void;
   setAppMode: (mode: AppMode) => void;
   setCurrentScenario: (scenario: Scenario | null) => void;
+  setLearnTopicId: (id: string | null) => void;
   setQps: (qps: number) => void;
+  setHotKeyEnabled: (enabled: boolean) => void;
   setDesigns: (designs: Design[]) => void;
   setActiveDesignId: (id: string | null) => void;
   createDesign: (name: string) => void;
@@ -48,21 +59,31 @@ interface AppState {
 }
 
 const useStore = create<AppState>((set, get) => ({
+  // View
+  appView: 'playground',
+
   // Mode
   appMode: 'comparison',
 
   // Scenario
   currentScenario: null,
   qps: 1000,
+  hotKeyEnabled: false,
+
+  // Learn
+  learnTopicId: null,
 
   // Designs
   designs: [],
   activeDesignId: null,
 
   // Actions
+  setAppView: (view) => set({ appView: view }),
   setAppMode: (mode) => set({ appMode: mode }),
   setCurrentScenario: (scenario) => set({ currentScenario: scenario }),
+  setLearnTopicId: (id) => set({ learnTopicId: id }),
   setQps: (qps) => set({ qps }),
+  setHotKeyEnabled: (enabled) => set({ hotKeyEnabled: enabled }),
 
   setDesigns: (designs) => set({ designs }),
   setActiveDesignId: (id) => set({ activeDesignId: id }),

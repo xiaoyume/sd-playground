@@ -1,7 +1,7 @@
 import React, { memo, useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
-import { Network, Box, Database, Zap, Globe, Shield, Server, Info } from 'lucide-react';
+import { Network, Box, Database, Zap, Globe, Shield, Server, Info, ArrowRight, PenTool, Key } from 'lucide-react';
 
 interface NodeConfig {
   icon: React.ReactNode;
@@ -47,6 +47,39 @@ const getNodeConfig = (label: string): NodeConfig => {
       label: 'LB',
       role: 'Load Balancer',
       description: 'Distributes traffic across multiple application servers',
+    };
+  }
+  if (lowerLabel.includes('redirect')) {
+    return {
+      icon: <ArrowRight size={16} />,
+      color: '#14b8a6',
+      bgColor: '#f0fdfa',
+      borderColor: '#5eead4',
+      label: 'REDIRECT',
+      role: 'Redirect Service',
+      description: 'Handles HTTP 302 redirects for short URL resolution',
+    };
+  }
+  if (lowerLabel.includes('write')) {
+    return {
+      icon: <PenTool size={16} />,
+      color: '#f43f5e',
+      bgColor: '#fff1f2',
+      borderColor: '#fda4af',
+      label: 'WRITE',
+      role: 'Write Service',
+      description: 'Handles URL creation requests and writes mapping to DB',
+    };
+  }
+  if (lowerLabel.includes('id-generator') || lowerLabel.includes('id generator')) {
+    return {
+      icon: <Key size={16} />,
+      color: '#eab308',
+      bgColor: '#fefce8',
+      borderColor: '#fde047',
+      label: 'ID-GEN',
+      role: 'ID Generator',
+      description: 'Generates unique short codes using selected strategy',
     };
   }
   if (lowerLabel.includes('app') || lowerLabel.includes('server')) {

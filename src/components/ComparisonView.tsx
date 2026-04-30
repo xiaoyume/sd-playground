@@ -12,7 +12,9 @@ const ComparisonView: React.FC = () => {
     activeDesignId,
     currentScenario,
     qps,
+    hotKeyEnabled,
     setQps,
+    setHotKeyEnabled,
     setActiveDesignId,
     createDesign,
     cloneDesign,
@@ -72,6 +74,14 @@ const ComparisonView: React.FC = () => {
             step="100"
             className="qps-input-small"
           />
+          <label className="hotkey-toggle">
+            <input
+              type="checkbox"
+              checked={hotKeyEnabled}
+              onChange={(e) => setHotKeyEnabled(e.target.checked)}
+            />
+            <span>🔥 Hot Key</span>
+          </label>
           <button className="clone-btn" onClick={handleCloneDesign}>
             {t.comparison.clone}
           </button>

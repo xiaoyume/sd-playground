@@ -6,7 +6,12 @@ export interface NodeCapacity {
 export const CAPACITY: Record<string, number> = {
   lb: 100000,
   app: 10000,
+  redirect: 15000,
+  'redirect-service': 15000,
+  write: 5000,
+  'write-service': 5000,
   cache: 50000,
+  'id-generator': 50000,
   db: 5000,
 };
 

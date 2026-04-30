@@ -27,6 +27,9 @@ export function analyzeTradeoffs(
   const hasCDN = nodes.some((n) => getNodeType(n).includes('cdn'));
   const hasLB = nodes.some((n) => getNodeType(n).includes('lb'));
   const hasGateway = nodes.some((n) => getNodeType(n).includes('gateway'));
+  const hasIdGenerator = nodes.some((n) => getNodeType(n).includes('id-generator') || getNodeType(n).includes('id generator'));
+  const hasRedirect = nodes.some((n) => getNodeType(n).includes('redirect'));
+  const hasWrite = nodes.some((n) => getNodeType(n).includes('write'));
 
   // Cache trade-offs
   if (hasCache) {
@@ -148,6 +151,60 @@ export function analyzeTradeoffs(
       category: 'Gateway',
       text: 'Single point of failure if not HA',
     });
+  }
+
+  // ID Generator trade-offs
+  if (hasIdGenerator) {
+    tradeoffs.push({
+      type: 'pro',
+      category: 'ID Generator',
+      text: 'Scalable ID generation',
+    });
+    tradeoffs.push({
+      type: 'pro',
+      category: 'ID Generator',
+      text: 'Unique short codes',
+    });
+    tradeoffs.push({
+      type: 'con',
+      category: 'ID Generator',
+      text: 'Additional complexity',
+    });
+  }
+
+  // Read/Write separation trade-offs
+  if (hasRedirect && hasWrite) {
+    tradeoffs.push({
+      type: 'pro',
+      category: 'Architecture',
+      text: 'Clear separation of read/write paths',
+    });
+    tradeoffs.push({
+      type: 'pro',
+      category: 'Architecture',
+      text: 'Independent scaling of read/write',
+    });
+    tradeoffs.push({
+      type: 'con',
+      category: 'Architecture',
+      text: 'More services to manage',
+    });
+  }
+
+  // Hot key trade-offs
+  if (result?.trafficBreakdown?.hotKeyEnabled) {
+    tradeoffs.push({
+      type: 'con',
+      category: 'Hot Key',
+      text: 'Uneven load distribution',
+    });
+    if (!hasCache) {
+      tradeoffs.push({
+        type: 'con',
+        category: 'Hot Key',
+        text: 'DB hotspot without cache',
+      });
+    }
   }
 
   // Bottleneck-based trade-offs

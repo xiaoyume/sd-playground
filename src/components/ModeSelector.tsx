@@ -4,11 +4,11 @@ import useStore from '../store/useStore';
 import useI18n from '../i18n/useI18n';
 import type { Scenario } from '../scenarios/types';
 import type { AppMode } from '../store/useStore';
-import { GitCompare, Pencil } from 'lucide-react';
+import { GitCompare, Pencil, GraduationCap } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 
 const ModeSelector: React.FC = () => {
-  const { setCurrentScenario, setAppMode } = useStore();
+  const { setCurrentScenario, setAppMode, setAppView } = useStore();
   const { t } = useI18n();
   const scenarios = getScenarios();
 
@@ -24,6 +24,16 @@ const ModeSelector: React.FC = () => {
         <h1>{t.mode.title}</h1>
         <p>{t.mode.subtitle}</p>
       </div>
+      <button
+        className="learn-entry-btn"
+        onClick={() => setAppView('learn')}
+      >
+        <GraduationCap size={18} />
+        <div className="learn-entry-text">
+          <span className="learn-entry-title">系统设计学习</span>
+          <span className="learn-entry-desc">从入门到进阶的结构化学习路径</span>
+        </div>
+      </button>
       <div className="scenario-list">
         {scenarios.map((scenario) => (
           <div key={scenario.id} className="scenario-card-enhanced">

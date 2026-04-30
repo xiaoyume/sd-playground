@@ -13,6 +13,7 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
   const {
     currentScenario,
     qps,
+    hotKeyEnabled,
     getDesignById,
     updateDesignAnalysis,
     setDesignSimulating,
@@ -32,18 +33,18 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
   const handleAnalyze = useCallback(() => {
     if (!design) return;
     const scenarioRules = currentScenario?.rules;
-    const result = analyze(design.nodes, design.edges, undefined, scenarioRules);
+    const result = analyze(design.nodes, design.edges, undefined, scenarioRules, hotKeyEnabled);
     updateDesignAnalysis(designId, result);
-  }, [design, designId, currentScenario, updateDesignAnalysis]);
+  }, [design, designId, currentScenario, hotKeyEnabled, updateDesignAnalysis]);
 
   const handleSimulate = useCallback(() => {
     if (!design) return;
     const scenarioRules = currentScenario?.rules;
-    const result = analyze(design.nodes, design.edges, qps, scenarioRules);
+    const result = analyze(design.nodes, design.edges, qps, scenarioRules, hotKeyEnabled);
     updateDesignAnalysis(designId, result);
     setDesignAnimationSpeed(designId, getAnimationSpeed(qps));
     setDesignSimulating(designId, true);
-  }, [design, designId, currentScenario, qps, updateDesignAnalysis, setDesignSimulating, setDesignAnimationSpeed, getAnimationSpeed]);
+  }, [design, designId, currentScenario, qps, hotKeyEnabled, updateDesignAnalysis, setDesignSimulating, setDesignAnimationSpeed, getAnimationSpeed]);
 
   const handleStop = useCallback(() => {
     setDesignSimulating(designId, false);
@@ -83,6 +84,19 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
 
       {analysisResult && (
         <div className="analysis-results">
+          {/* Hot Key Status */}
+          {hotKeyEnabled && (
+            <div className="hotkey-section">
+              <h4>🔥 Hot Key</h4>
+              <div className="hotkey-status">
+                <span className="hotkey-badge enabled">Enabled</span>
+                {analysisResult.trafficBreakdown && (
+                  <span className="hotkey-traffic">{Math.round(analysisResult.trafficBreakdown.hotQps)} QPS</span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Latency */}
           {analysisResult.latency && (
             <div className="latency-section">
@@ -120,6 +134,20 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
                 <span>Total</span>
                 <span>{Math.round(analysisResult.trafficBreakdown.totalQps)}</span>
               </div>
+              <div className="traffic-item">
+                <span>Read</span>
+                <span>{Math.round(analysisResult.trafficBreakdown.readQps)}</span>
+              </div>
+              <div className="traffic-item">
+                <span>Write</span>
+                <span>{Math.round(analysisResult.trafficBreakdown.writeQps)}</span>
+              </div>
+              {hotKeyEnabled && (
+                <div className="traffic-item highlight">
+                  <span>Hot Key</span>
+                  <span>{Math.round(analysisResult.trafficBreakdown.hotQps)}</span>
+                </div>
+              )}
               <div className="traffic-item highlight">
                 <span>Cache Hit</span>
                 <span>{Math.round(analysisResult.trafficBreakdown.cacheHitQps)}</span>
@@ -130,6 +158,19 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
               </div>
             </div>
           )}
+
+          {/* Request Flow */}
+          <div className="flow-section">
+            <h4>📍 Request Flow</h4>
+            <div className="flow-path">
+              <span className="flow-label">READ:</span>
+              <span className="flow-route">gateway → lb → redirect → cache → db</span>
+            </div>
+            <div className="flow-path">
+              <span className="flow-label">WRITE:</span>
+              <span className="flow-route">gateway → lb → write → id-gen → db</span>
+            </div>
+          </div>
 
           {analysisResult.bottlenecks.length > 0 && (
             <div className="bottlenecks-section">

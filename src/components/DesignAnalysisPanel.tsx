@@ -1,6 +1,9 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import useStore from '../store/useStore';
+import useI18n from '../i18n/useI18n';
 import { analyze } from '../logic/rules';
+import { analyzeTradeoffs } from '../engine/tradeoff';
+import { explainDesign } from '../engine/explain';
 
 interface DesignAnalysisPanelProps {
   designId: string;
@@ -15,6 +18,7 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
     setDesignSimulating,
     setDesignAnimationSpeed,
   } = useStore();
+  const { t } = useI18n();
 
   const design = getDesignById(designId);
 
@@ -45,6 +49,16 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
     setDesignSimulating(designId, false);
   }, [designId, setDesignSimulating]);
 
+  const tradeoffResult = useMemo(() => {
+    if (!design) return null;
+    return analyzeTradeoffs(design.nodes, design.analysisResult);
+  }, [design]);
+
+  const explainResult = useMemo(() => {
+    if (!design || !design.analysisResult) return null;
+    return explainDesign(design.nodes, design.analysisResult, design.analysisResult.latency);
+  }, [design]);
+
   if (!design) return null;
 
   const { analysisResult, isSimulating } = design;
@@ -52,26 +66,56 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
   return (
     <div className="design-analysis-panel">
       <div className="design-analysis-actions">
-        <button className="analyze-btn" onClick={handleAnalyze}>Analyze</button>
+        <button className="analyze-btn" onClick={handleAnalyze}>{t.analysis.analyze}</button>
         {!isSimulating ? (
-          <button className="simulate-btn" onClick={handleSimulate}>▶ Simulate</button>
+          <button className="simulate-btn" onClick={handleSimulate}>▶ {t.analysis.simulate}</button>
         ) : (
-          <button className="stop-btn" onClick={handleStop}>⏹ Stop</button>
+          <button className="stop-btn" onClick={handleStop}>⏹ {t.analysis.stop}</button>
         )}
       </div>
 
       {isSimulating && (
         <div className="simulation-status">
           <div className="status-indicator"></div>
-          <span>Simulating {qps} QPS</span>
+          <span>{t.analysis.simulate} {qps} QPS</span>
         </div>
       )}
 
       {analysisResult && (
         <div className="analysis-results">
+          {/* Latency */}
+          {analysisResult.latency && (
+            <div className="latency-section">
+              <h4>{t.analysis.latency}</h4>
+              <div className="latency-item">
+                <span>{t.analysis.totalLatency}</span>
+                <span className="latency-value">{analysisResult.latency.totalLatency} ms</span>
+              </div>
+              <div className="latency-item">
+                <span>{t.analysis.readLatency}</span>
+                <span>{analysisResult.latency.readLatency} ms</span>
+              </div>
+              <div className="latency-item">
+                <span>{t.analysis.writeLatency}</span>
+                <span>{analysisResult.latency.writeLatency} ms</span>
+              </div>
+              {analysisResult.latency.pathLatencies.length > 0 && (
+                <div className="latency-paths">
+                  {analysisResult.latency.pathLatencies.map((path, i) => (
+                    <div key={i} className="latency-path">
+                      <span className="path-name">{path.path}</span>
+                      <span className="path-latency">{path.latency} ms</span>
+                      <span className="path-desc">{path.description}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {analysisResult.trafficBreakdown && (
             <div className="traffic-breakdown-section">
-              <h4>📊 Traffic</h4>
+              <h4>📊 {t.analysis.trafficLabel}</h4>
               <div className="traffic-item">
                 <span>Total</span>
                 <span>{Math.round(analysisResult.trafficBreakdown.totalQps)}</span>
@@ -89,7 +133,7 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
 
           {analysisResult.bottlenecks.length > 0 && (
             <div className="bottlenecks-section">
-              <h4>🚨 Bottlenecks</h4>
+              <h4>{t.analysis.bottlenecks}</h4>
               <ul>
                 {analysisResult.bottlenecks.map((b, i) => (
                   <li key={i} className="bottleneck-item">{b}</li>
@@ -100,7 +144,7 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
 
           {analysisResult.nodeLoadInfo.length > 0 && (
             <div className="node-status-section">
-              <h4>Nodes</h4>
+              <h4>{t.analysis.nodeStatus}</h4>
               <ul>
                 {analysisResult.nodeLoadInfo.map((node) => (
                   <li key={node.nodeId} className={`node-status-${node.status}`}>
@@ -112,9 +156,45 @@ const DesignAnalysisPanel: React.FC<DesignAnalysisPanelProps> = ({ designId }) =
             </div>
           )}
 
+          {/* Trade-offs */}
+          {tradeoffResult && tradeoffResult.tradeoffs.length > 0 && (
+            <div className="tradeoff-section">
+              <h4>{t.analysis.tradeoffs}</h4>
+              <div className="tradeoff-list">
+                {tradeoffResult.tradeoffs.map((item, i) => (
+                  <div key={i} className={`tradeoff-item ${item.type}`}>
+                    <span className="tradeoff-icon">{item.type === 'pro' ? '✅' : '⚠️'}</span>
+                    <span className="tradeoff-text">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Explanations */}
+          {explainResult && (
+            <div className="explanation-section">
+              <h4>{t.analysis.whyThisDesign}</h4>
+              <div className="explanation-summary">{explainResult.designSummary}</div>
+              {explainResult.metricExplanations.length > 0 && (
+                <div className="metric-explanations">
+                  {explainResult.metricExplanations.map((m, i) => (
+                    <div key={i} className="metric-explanation">
+                      <div className="metric-header">
+                        <span className="metric-name">{m.metric}</span>
+                        <span className="metric-value">{m.value}</span>
+                      </div>
+                      <div className="metric-desc">{m.explanation}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {analysisResult.suggestions.length > 0 && (
             <div className="suggestions-section">
-              <h4>💡 Tips</h4>
+              <h4>{t.analysis.suggestions}</h4>
               <ul>
                 {analysisResult.suggestions.map((s, i) => (
                   <li key={i} className="suggestion-item">{s}</li>

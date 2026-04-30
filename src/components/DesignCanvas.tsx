@@ -144,7 +144,11 @@ const DesignCanvasInner: React.FC<DesignCanvasProps> = ({ designId }) => {
         if (loadInfo.status === 'warning') className = 'node-warning';
         else if (loadInfo.status === 'overloaded') className = 'node-overloaded';
       }
-      return { ...node, className };
+      return {
+        ...node,
+        className,
+        data: { ...node.data, loadInfo },
+      };
     });
   }, [nodes, design?.analysisResult, isSimulating, connectedNodeIds, onDelete]);
 

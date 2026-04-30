@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import useStore from '../store/useStore';
+import useI18n from '../i18n/useI18n';
 import type { Design } from '../store/useStore';
+import { analyzeTradeoffs } from '../engine/tradeoff';
 
-function evaluate(designA: Design, designB: Design): { winner: string | null; reason: string } {
+function evaluate(designA: Design, designB: Design): { winner: string | null; reasons: string[]; tradeoffsA: string[]; tradeoffsB: string[] } {
   const rA = designA.analysisResult;
   const rB = designB.analysisResult;
 
-  if (!rA || !rB) return { winner: null, reason: '' };
+  if (!rA || !rB) return { winner: null, reasons: [], tradeoffsA: [], tradeoffsB: [] };
 
   let scoreA = 0;
   let scoreB = 0;
@@ -28,10 +30,10 @@ function evaluate(designA: Design, designB: Design): { winner: string | null; re
 
     if (dbLoadA < dbLoadB) {
       scoreA++;
-      reasons.push(`${designA.name} has lower DB load`);
+      reasons.push(`${designA.name} has lower DB load (${Math.round(dbLoadA)} vs ${Math.round(dbLoadB)} QPS)`);
     } else if (dbLoadB < dbLoadA) {
       scoreB++;
-      reasons.push(`${designB.name} has lower DB load`);
+      reasons.push(`${designB.name} has lower DB load (${Math.round(dbLoadB)} vs ${Math.round(dbLoadA)} QPS)`);
     }
 
     // Cache effect comparison
@@ -41,6 +43,17 @@ function evaluate(designA: Design, designB: Design): { winner: string | null; re
     } else if (rB.trafficBreakdown.cacheHitQps > rA.trafficBreakdown.cacheHitQps) {
       scoreB++;
       reasons.push(`${designB.name} has better cache utilization`);
+    }
+  }
+
+  // Latency comparison
+  if (rA.latency && rB.latency) {
+    if (rA.latency.totalLatency < rB.latency.totalLatency) {
+      scoreA++;
+      reasons.push(`${designA.name} has lower latency (${rA.latency.totalLatency}ms vs ${rB.latency.totalLatency}ms)`);
+    } else if (rB.latency.totalLatency < rA.latency.totalLatency) {
+      scoreB++;
+      reasons.push(`${designB.name} has lower latency (${rB.latency.totalLatency}ms vs ${rA.latency.totalLatency}ms)`);
     }
   }
 
@@ -56,13 +69,21 @@ function evaluate(designA: Design, designB: Design): { winner: string | null; re
     reasons.push(`${designB.name} has fewer overloaded nodes`);
   }
 
-  if (scoreA > scoreB) return { winner: designA.name, reason: reasons.join('; ') };
-  if (scoreB > scoreA) return { winner: designB.name, reason: reasons.join('; ') };
-  return { winner: null, reason: 'Both designs are comparable' };
+  // Get trade-offs
+  const tradeoffA = analyzeTradeoffs(designA.nodes, rA);
+  const tradeoffB = analyzeTradeoffs(designB.nodes, rB);
+
+  const tradeoffsA = tradeoffA.tradeoffs.filter((t) => t.type === 'con').map((t) => t.text);
+  const tradeoffsB = tradeoffB.tradeoffs.filter((t) => t.type === 'con').map((t) => t.text);
+
+  if (scoreA > scoreB) return { winner: designA.name, reasons, tradeoffsA, tradeoffsB };
+  if (scoreB > scoreA) return { winner: designB.name, reasons, tradeoffsA, tradeoffsB };
+  return { winner: null, reasons: ['Both designs are comparable'], tradeoffsA, tradeoffsB };
 }
 
 const ComparisonPanel: React.FC = () => {
   const { designs } = useStore();
+  const { t } = useI18n();
 
   if (designs.length < 2) return null;
 
@@ -73,11 +94,11 @@ const ComparisonPanel: React.FC = () => {
   const resultB = designB.analysisResult;
 
   const hasResults = resultA && resultB;
-  const verdict = hasResults ? evaluate(designA, designB) : null;
+  const verdict = useMemo(() => hasResults ? evaluate(designA, designB) : null, [designA, designB, hasResults]);
 
   return (
     <div className="comparison-panel">
-      <h3>📊 Comparison</h3>
+      <h3>{t.comparison.title}</h3>
 
       {/* Verdict */}
       {verdict && (
@@ -86,23 +107,72 @@ const ComparisonPanel: React.FC = () => {
             <div className="verdict-winner">
               <span className="verdict-icon">🏆</span>
               <span className="verdict-name">{verdict.winner}</span>
-              <span className="verdict-label">is better</span>
+              <span className="verdict-label">{t.comparison.better}</span>
             </div>
           ) : (
             <div className="verdict-tie">
               <span className="verdict-icon">🤝</span>
-              <span className="verdict-label">Comparable</span>
+              <span className="verdict-label">{t.comparison.comparable}</span>
             </div>
           )}
-          <div className="verdict-reasons">{verdict.reason}</div>
+
+          {/* Reasons */}
+          <div className="verdict-reasons">
+            <h5>{t.comparison.because}</h5>
+            <ul>
+              {verdict.reasons.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Trade-offs */}
+          <div className="verdict-tradeoffs">
+            <h5>{t.comparison.however}</h5>
+            {verdict.tradeoffsA.length > 0 && (
+              <div className="tradeoff-list">
+                <span className="tradeoff-design">{designA.name}:</span>
+                {verdict.tradeoffsA.map((item, i) => (
+                  <span key={i} className="tradeoff-con">⚠️ {item}</span>
+                ))}
+              </div>
+            )}
+            {verdict.tradeoffsB.length > 0 && (
+              <div className="tradeoff-list">
+                <span className="tradeoff-design">{designB.name}:</span>
+                {verdict.tradeoffsB.map((item, i) => (
+                  <span key={i} className="tradeoff-con">⚠️ {item}</span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {hasResults && (
         <>
+          {/* Latency Comparison */}
+          {resultA.latency && resultB.latency && (
+            <div className="comparison-section">
+              <h4>{t.analysis.latency}</h4>
+              <div className="comparison-row">
+                <div className={`comparison-cell ${resultA.latency.totalLatency <= resultB.latency.totalLatency ? 'good' : ''}`}>
+                  <span className="comparison-design">{designA.name}</span>
+                  <span className="latency-main">{resultA.latency.totalLatency} ms</span>
+                  <span className="latency-detail">R: {resultA.latency.readLatency}ms / W: {resultA.latency.writeLatency}ms</span>
+                </div>
+                <div className={`comparison-cell ${resultB.latency.totalLatency <= resultA.latency.totalLatency ? 'good' : ''}`}>
+                  <span className="comparison-design">{designB.name}</span>
+                  <span className="latency-main">{resultB.latency.totalLatency} ms</span>
+                  <span className="latency-detail">R: {resultB.latency.readLatency}ms / W: {resultB.latency.writeLatency}ms</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Bottleneck Comparison */}
           <div className="comparison-section">
-            <h4>🚨 Bottlenecks</h4>
+            <h4>{t.analysis.bottlenecks}</h4>
             <div className="comparison-row">
               <div className={`comparison-cell ${resultA.bottlenecks.length === 0 ? 'good' : 'bad'}`}>
                 <span className="comparison-design">{designA.name}</span>
@@ -118,7 +188,7 @@ const ComparisonPanel: React.FC = () => {
           {/* DB Load Comparison */}
           {resultA.trafficBreakdown && resultB.trafficBreakdown && (
             <div className="comparison-section">
-              <h4>💾 DB Load</h4>
+              <h4>{t.comparison.dbLoad}</h4>
               <div className="comparison-row">
                 <div className="comparison-cell">
                   <span className="comparison-design">{designA.name}</span>
@@ -135,15 +205,15 @@ const ComparisonPanel: React.FC = () => {
           {/* Cache Effect Comparison */}
           {resultA.trafficBreakdown && resultB.trafficBreakdown && (
             <div className="comparison-section">
-              <h4>⚡ Cache Effect</h4>
+              <h4>{t.comparison.cacheEffect}</h4>
               <div className="comparison-row">
                 <div className="comparison-cell">
                   <span className="comparison-design">{designA.name}</span>
-                  <span>{Math.round(resultA.trafficBreakdown.cacheHitQps)} QPS saved</span>
+                  <span>{Math.round(resultA.trafficBreakdown.cacheHitQps)} {t.comparison.qpsSaved}</span>
                 </div>
                 <div className="comparison-cell">
                   <span className="comparison-design">{designB.name}</span>
-                  <span>{Math.round(resultB.trafficBreakdown.cacheHitQps)} QPS saved</span>
+                  <span>{Math.round(resultB.trafficBreakdown.cacheHitQps)} {t.comparison.qpsSaved}</span>
                 </div>
               </div>
             </div>
@@ -153,7 +223,7 @@ const ComparisonPanel: React.FC = () => {
 
       {!hasResults && (
         <div className="comparison-empty">
-          <p>Run analysis on both designs to compare</p>
+          <p>{t.comparison.runAnalysis}</p>
         </div>
       )}
     </div>

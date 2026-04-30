@@ -2,8 +2,10 @@ import type { Node, Edge } from 'reactflow';
 import { getNodeCapacity, getLoadPercentage, getLoadStatus } from './capacity';
 import { runRules } from '../engine/ruleEngine';
 import { computeTraffic, getNodeTraffic } from '../engine/trafficModel';
+import { computeLatency } from '../engine/latency';
 import type { RuleResult, Rule } from '../engine/types';
 import type { TrafficBreakdown } from '../engine/trafficModel';
+import type { LatencyResult } from '../engine/latency';
 
 export interface NodeLoadInfo {
   nodeId: string;
@@ -21,6 +23,7 @@ export interface AnalysisResult {
   bottlenecks: string[];
   bottleneckNodeIds: string[];
   trafficBreakdown: TrafficBreakdown | null;
+  latency: LatencyResult | null;
   loadBreakdown: {
     appLoad: number;
     dbLoad: number;
@@ -87,6 +90,7 @@ export function analyze(
 
   const nodeLoadInfo: NodeLoadInfo[] = [];
   let trafficBreakdown: TrafficBreakdown | null = null;
+  let latency: LatencyResult | null = null;
   let appLoad = 0;
   let dbLoad = 0;
   let cacheSaved = 0;
@@ -107,6 +111,9 @@ export function analyze(
     appLoad = qps;
     dbLoad = trafficBreakdown.dbReadQps + trafficBreakdown.dbWriteQps;
     cacheSaved = trafficBreakdown.cacheHitQps;
+
+    // Calculate latency
+    latency = computeLatency(nodes, trafficBreakdown);
 
     // Analyze each node
     nodes.forEach((node) => {
@@ -134,6 +141,7 @@ export function analyze(
     bottlenecks,
     bottleneckNodeIds,
     trafficBreakdown,
+    latency,
     loadBreakdown: {
       appLoad,
       dbLoad,

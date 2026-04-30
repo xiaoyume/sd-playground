@@ -3,6 +3,8 @@ import type { Node, Edge } from 'reactflow';
 import type { AnalysisResult } from '../logic/rules';
 import type { Scenario } from '../scenarios/types';
 
+export type AppMode = 'comparison' | 'free';
+
 export interface Design {
   id: string;
   name: string;
@@ -14,6 +16,9 @@ export interface Design {
 }
 
 interface AppState {
+  // Mode
+  appMode: AppMode;
+
   // Scenario
   currentScenario: Scenario | null;
   qps: number;
@@ -23,6 +28,7 @@ interface AppState {
   activeDesignId: string | null;
 
   // Actions
+  setAppMode: (mode: AppMode) => void;
   setCurrentScenario: (scenario: Scenario | null) => void;
   setQps: (qps: number) => void;
   setDesigns: (designs: Design[]) => void;
@@ -42,6 +48,9 @@ interface AppState {
 }
 
 const useStore = create<AppState>((set, get) => ({
+  // Mode
+  appMode: 'comparison',
+
   // Scenario
   currentScenario: null,
   qps: 1000,
@@ -51,6 +60,7 @@ const useStore = create<AppState>((set, get) => ({
   activeDesignId: null,
 
   // Actions
+  setAppMode: (mode) => set({ appMode: mode }),
   setCurrentScenario: (scenario) => set({ currentScenario: scenario }),
   setQps: (qps) => set({ qps }),
 

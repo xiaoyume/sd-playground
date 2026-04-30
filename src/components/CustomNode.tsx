@@ -1,7 +1,7 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
-import { Network, Box, Database, Zap, Globe, Shield, Server } from 'lucide-react';
+import { Network, Box, Database, Zap, Globe, Shield, Server, Info } from 'lucide-react';
 
 interface NodeConfig {
   icon: React.ReactNode;
@@ -9,6 +9,8 @@ interface NodeConfig {
   bgColor: string;
   borderColor: string;
   label: string;
+  role: string;
+  description: string;
 }
 
 const getNodeConfig = (label: string): NodeConfig => {
@@ -21,6 +23,8 @@ const getNodeConfig = (label: string): NodeConfig => {
       bgColor: '#ecfeff',
       borderColor: '#67e8f9',
       label: 'CDN',
+      role: 'Content Delivery Network',
+      description: 'Serves static content close to users, reducing origin server load',
     };
   }
   if (lowerLabel.includes('gateway')) {
@@ -30,6 +34,8 @@ const getNodeConfig = (label: string): NodeConfig => {
       bgColor: '#f5f3ff',
       borderColor: '#c4b5fd',
       label: 'GW',
+      role: 'API Gateway',
+      description: 'Handles authentication, rate limiting, and request routing',
     };
   }
   if (lowerLabel.includes('lb') || lowerLabel.includes('load balancer')) {
@@ -39,6 +45,8 @@ const getNodeConfig = (label: string): NodeConfig => {
       bgColor: '#eff6ff',
       borderColor: '#93c5fd',
       label: 'LB',
+      role: 'Load Balancer',
+      description: 'Distributes traffic across multiple application servers',
     };
   }
   if (lowerLabel.includes('app') || lowerLabel.includes('server')) {
@@ -48,6 +56,8 @@ const getNodeConfig = (label: string): NodeConfig => {
       bgColor: '#f0fdf4',
       borderColor: '#86efac',
       label: 'APP',
+      role: 'Application Server',
+      description: 'Processes incoming requests and business logic',
     };
   }
   if (lowerLabel.includes('db-primary') || lowerLabel.includes('db primary')) {
@@ -57,6 +67,8 @@ const getNodeConfig = (label: string): NodeConfig => {
       bgColor: '#fff7ed',
       borderColor: '#fdba74',
       label: 'DB-P',
+      role: 'Primary Database',
+      description: 'Handles all write operations and serves as source of truth',
     };
   }
   if (lowerLabel.includes('db-replica') || lowerLabel.includes('db replica')) {
@@ -66,6 +78,8 @@ const getNodeConfig = (label: string): NodeConfig => {
       bgColor: '#fff7ed',
       borderColor: '#fdba74',
       label: 'DB-R',
+      role: 'Database Replica',
+      description: 'Offloads read traffic from primary database',
     };
   }
   if (lowerLabel.includes('db') || lowerLabel.includes('database')) {
@@ -75,6 +89,8 @@ const getNodeConfig = (label: string): NodeConfig => {
       bgColor: '#fff7ed',
       borderColor: '#fdba74',
       label: 'DB',
+      role: 'Database',
+      description: 'Stores and retrieves application data',
     };
   }
   if (lowerLabel.includes('cache')) {
@@ -84,6 +100,8 @@ const getNodeConfig = (label: string): NodeConfig => {
       bgColor: '#faf5ff',
       borderColor: '#d8b4fe',
       label: 'CACHE',
+      role: 'Cache Layer',
+      description: 'Stores frequently accessed data to reduce database load',
     };
   }
 
@@ -93,11 +111,14 @@ const getNodeConfig = (label: string): NodeConfig => {
     bgColor: '#f9fafb',
     borderColor: '#d1d5db',
     label: label,
+    role: 'Component',
+    description: 'Part of the system architecture',
   };
 };
 
 const CustomNode: React.FC<NodeProps> = ({ data, id, selected }) => {
   const config = getNodeConfig(data.label);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -112,6 +133,8 @@ const CustomNode: React.FC<NodeProps> = ({ data, id, selected }) => {
         '--node-bg': config.bgColor,
         '--node-border': config.borderColor,
       } as React.CSSProperties}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
     >
       <Handle type="target" position={Position.Top} className="custom-node-handle" />
       <div className="custom-node-content">
@@ -122,6 +145,34 @@ const CustomNode: React.FC<NodeProps> = ({ data, id, selected }) => {
         ×
       </button>
       <Handle type="source" position={Position.Bottom} className="custom-node-handle" />
+
+      {/* Tooltip */}
+      {showTooltip && (
+        <div className="node-tooltip">
+          <div className="tooltip-header">
+            <Info size={12} />
+            <span className="tooltip-role">{config.role}</span>
+          </div>
+          <div className="tooltip-desc">{config.description}</div>
+          {data.loadInfo && (
+            <div className="tooltip-load">
+              <div className="tooltip-load-bar">
+                <div
+                  className="tooltip-load-fill"
+                  style={{
+                    width: `${Math.min(data.loadInfo.loadPercentage, 100)}%`,
+                    backgroundColor: data.loadInfo.status === 'overloaded' ? '#ef4444' :
+                      data.loadInfo.status === 'warning' ? '#f59e0b' : '#22c55e',
+                  }}
+                />
+              </div>
+              <span className="tooltip-load-text">
+                {Math.round(data.loadInfo.loadPercentage)}% load
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

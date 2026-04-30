@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import useStore from '../store/useStore';
+import useI18n from '../i18n/useI18n';
 import DesignCanvas from './DesignCanvas';
 import DesignAnalysisPanel from './DesignAnalysisPanel';
 import ComparisonPanel from './ComparisonPanel';
@@ -18,6 +19,7 @@ const ComparisonView: React.FC = () => {
     resetDesign,
     setCurrentScenario,
   } = useStore();
+  const { t } = useI18n();
 
   // Initialize two designs on mount
   useEffect(() => {
@@ -54,14 +56,14 @@ const ComparisonView: React.FC = () => {
       {/* Top Bar */}
       <div className="comparison-topbar">
         <button className="back-btn" onClick={handleBackToScenarios}>
-          ← Back
+          {t.comparison.back}
         </button>
         <div className="comparison-title">
           <span className="scenario-badge-small">{currentScenario?.name}</span>
-          <span>Architecture Comparison</span>
+          <span>{t.comparison.comparison}</span>
         </div>
         <div className="comparison-controls">
-          <label>QPS:</label>
+          <label>{t.comparison.qps}</label>
           <input
             type="number"
             value={qps}
@@ -71,7 +73,7 @@ const ComparisonView: React.FC = () => {
             className="qps-input-small"
           />
           <button className="clone-btn" onClick={handleCloneDesign}>
-            Clone A → B
+            {t.comparison.clone}
           </button>
         </div>
       </div>
@@ -87,7 +89,7 @@ const ComparisonView: React.FC = () => {
                 className="reset-btn"
                 onClick={() => resetDesign(designs[0].id)}
               >
-                Reset
+                {t.comparison.reset}
               </button>
             </div>
             <div className="design-body">
@@ -111,7 +113,7 @@ const ComparisonView: React.FC = () => {
                 className="reset-btn"
                 onClick={() => resetDesign(designs[1].id)}
               >
-                Reset
+                {t.comparison.reset}
               </button>
             </div>
             <div className="design-body">
